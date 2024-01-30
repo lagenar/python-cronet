@@ -11,7 +11,7 @@ cd src
 ./build/install-build-deps.sh
 gclient runhooks
 gclient sync
-cd net
+cd components/cronet
 gn gen out/Cronet
 ninja -C out/Cronet cronet_package
 ```
@@ -24,3 +24,6 @@ ninja -C out/Cronet cronet_package
 - c++: https://cython.readthedocs.io/en/latest/src/userguide/wrapping_CPlusPlus.html
 
 
+/home/lucas/chromium/src/components/cronet/out/Cronet/cronet
+/home/lucas/chromium/src/net/out/Cronet
+/home/lucas/chromium/src/components/cronet/out/Cronet/cronet/include
