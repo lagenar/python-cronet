@@ -6,8 +6,8 @@
 
 void execute(Cronet_ExecutorPtr executor, Cronet_RunnablePtr runnable)
 {
-    printf("execute");
     Cronet_Runnable_Run(runnable);
+    printf("execute");
     Cronet_Runnable_Destroy(runnable);
 }
 

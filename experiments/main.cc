@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <iostream>
+#include <vector>
 
 #include "cronet_c.h"
 #include "sample_executor.h"
@@ -22,22 +23,34 @@ Cronet_EnginePtr CreateCronetEngine() {
 void PerformRequest(Cronet_EnginePtr cronet_engine,
                     const std::string& url,
                     Cronet_ExecutorPtr executor) {
-  SampleUrlRequestCallback url_request_callback;
-  Cronet_UrlRequestPtr request = Cronet_UrlRequest_Create();
-  Cronet_UrlRequestParamsPtr request_params = Cronet_UrlRequestParams_Create();
-  Cronet_UrlRequestParams_http_method_set(request_params, "GET");
+  const int requests_count = 100;
+  std::vector<SampleUrlRequestCallback*> callbacks;
+  std::vector<Cronet_UrlRequestPtr> requests;
 
-  Cronet_UrlRequest_InitWithParams(
-      request, cronet_engine, url.c_str(), request_params,
-      url_request_callback.GetUrlRequestCallback(), executor);
-  Cronet_UrlRequestParams_Destroy(request_params);
+  for (int i = 0; i < requests_count; i++) {
+    SampleUrlRequestCallback* url_request_callback = new SampleUrlRequestCallback();
+    Cronet_UrlRequestPtr request = Cronet_UrlRequest_Create();
+    Cronet_UrlRequestParamsPtr request_params = Cronet_UrlRequestParams_Create();
+    Cronet_UrlRequestParams_http_method_set(request_params, "GET");
 
-  Cronet_UrlRequest_Start(request);
-  url_request_callback.WaitForDone();
-  Cronet_UrlRequest_Destroy(request);
+    Cronet_UrlRequest_InitWithParams(
+        request, cronet_engine, url.c_str(), request_params,
+        url_request_callback->GetUrlRequestCallback(), executor);
+    Cronet_UrlRequestParams_Destroy(request_params);
 
-  std::cout << "Response Data:" << std::endl
-            << url_request_callback.response_as_string() << std::endl;
+    Cronet_UrlRequest_Start(request);
+    callbacks.push_back(url_request_callback);
+    requests.push_back(request);
+  }
+
+  for (int i = 0; i < requests_count; i++) {
+    (*callbacks[i]).WaitForDone();
+    Cronet_UrlRequest_Destroy(requests[i]);
+
+    //std::cout << "Response Data:" << std::endl
+    //        << (*callbacks[i]).response_as_string() << std::endl;
+  }
+
 }
 
 // Download a resource from the Internet. Optional argument must specify
