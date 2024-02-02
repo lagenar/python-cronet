@@ -1,0 +1,18 @@
+[project]
+name = "cronet"
+version = "0.0.1"
+authors = [
+  { name="Lucas Moauro" },
+]
+description = "Python Chromium's http library"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://github.com/lagenar/python-cronet"
+Issues = "https://github.com/lagenar/python-cronet/issues"
