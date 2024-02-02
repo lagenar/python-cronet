@@ -4,7 +4,7 @@ version = "0.0.1"
 authors = [
   { name="Lucas Moauro" },
 ]
-description = "Python Chromium's http library"
+description = "Python wrapper for Chromium's http library"
 readme = "README.md"
 requires-python = ">=3.8"
 classifiers = [
