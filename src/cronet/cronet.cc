@@ -49,15 +49,18 @@ const Response handle_request(std::string& url)
     url_request_callback.WaitForDone();
     Cronet_UrlRequest_Destroy(request);
 
-    const char* content =  url_request_callback.response_as_string().c_str();
-
     Cronet_Engine_Shutdown(cronet_engine);
     Cronet_Engine_Destroy(cronet_engine);
 
     Response response = {};
     response.status_code = url_request_callback.status_code;
-    response.content = content;
+    response.content = py::bytes(url_request_callback.response_as_string());
     response.headers = py::dict();
+    for (const auto& header : url_request_callback.headers) {
+        py::bytes key = py::bytes(std::get<0>(header));
+        py::bytes value = py::bytes(std::get<1>(header)); 
+        response.headers[key] = value;
+    }
 
     return response;
 }

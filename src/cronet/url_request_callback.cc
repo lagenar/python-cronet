@@ -60,6 +60,13 @@ void UrlRequestCallback::OnSucceeded(Cronet_UrlRequestPtr request,
                                      Cronet_UrlResponseInfoPtr info) {
   std::cout << "OnSucceeded called." << std::endl;
   status_code = Cronet_UrlResponseInfo_http_status_code_get(info); 
+  int headers_size = Cronet_UrlResponseInfo_all_headers_list_size(info);
+  for (int i = 0; i < headers_size; i++) {
+    Cronet_HttpHeaderPtr header = Cronet_UrlResponseInfo_all_headers_list_at(info, i);
+    auto h = std::make_tuple(std::string(Cronet_HttpHeader_name_get(header)), std::string(Cronet_HttpHeader_value_get(header)));
+    headers.push_back(h);
+  }
+
   SignalDone(true);
 }
 

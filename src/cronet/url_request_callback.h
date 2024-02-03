@@ -5,6 +5,8 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <vector>
+#include <tuple>
 
 #include "cronet_c.h"
 
@@ -24,6 +26,7 @@ class UrlRequestCallback {
   // Returns string representation of the received response.
   std::string response_as_string() const { return response_as_string_; }
   int32_t status_code;
+  std::vector<std::tuple<std::string, std::string> > headers;
 
  protected:
   void OnRedirectReceived(Cronet_UrlRequestPtr request,
