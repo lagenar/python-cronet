@@ -1,5 +1,6 @@
 #include <pybind11/pybind11.h>
 #include <iostream>
+#include <cstring>
 #include "cronet_c.h"
 #include "executor.h"
 #include "url_request_callback.h"
@@ -27,7 +28,32 @@ struct Response {
 };
 
 
-const Response handle_request(std::string& url) 
+int64_t RequestContentLength(Cronet_UploadDataProviderPtr self)
+{
+    std::string* content = static_cast<std::string* >(Cronet_UploadDataProvider_GetClientContext(self));
+    return content->length();
+}
+
+void RequestContentRead(Cronet_UploadDataProviderPtr self, Cronet_UploadDataSinkPtr upload_data_sink, Cronet_BufferPtr buffer)
+{
+    size_t buffer_size = Cronet_Buffer_GetSize(buffer);
+    std::cout << "Buffer size " << buffer_size << std::endl;
+    std::string* content = static_cast<std::string* >(Cronet_UploadDataProvider_GetClientContext(self));
+    memcpy(Cronet_Buffer_GetData(buffer), content->c_str(), content->length());
+    Cronet_UploadDataSink_OnReadSucceeded(upload_data_sink, content->length(), false);
+}
+
+void RequestContentRewind(Cronet_UploadDataProviderPtr self, Cronet_UploadDataSinkPtr upload_data_sink)
+{
+
+}
+
+void RequestContentClose(Cronet_UploadDataProviderPtr self)
+{
+}
+
+
+const Response handle_request(const std::string& url, const std::string& method, std::string& content) 
 {
     Cronet_EnginePtr cronet_engine = CreateCronetEngine();
     std::cout << "Cronet version: " << Cronet_Engine_GetVersionString(cronet_engine) << std::endl;
@@ -37,7 +63,18 @@ const Response handle_request(std::string& url)
     UrlRequestCallback url_request_callback;
     Cronet_UrlRequestPtr request = Cronet_UrlRequest_Create();
     Cronet_UrlRequestParamsPtr request_params = Cronet_UrlRequestParams_Create();
-    Cronet_UrlRequestParams_http_method_set(request_params, "GET");
+    Cronet_UrlRequestParams_http_method_set(request_params, method.c_str());
+
+    Cronet_UploadDataProviderPtr upload_data_provider = Cronet_UploadDataProvider_CreateWith(
+        &RequestContentLength,
+        &RequestContentRead,
+        &RequestContentRewind,
+        &RequestContentClose
+    );
+
+    Cronet_UploadDataProvider_SetClientContext(upload_data_provider, static_cast<void*>(&content));
+
+    Cronet_UrlRequestParams_upload_data_provider_set(request_params, upload_data_provider);
 
     Cronet_UrlRequest_InitWithParams(
         request, cronet_engine, url.c_str(), request_params,

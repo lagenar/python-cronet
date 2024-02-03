@@ -2,4 +2,4 @@ import transport
 import httpx
 
 client = httpx.Client(transport=transport.CronetTransport())
-response = client.get("https://httpbin.org/response-headers?freeform=testing")
+response = client.post("https://httpbin.org/post", json={"test": "true"})
