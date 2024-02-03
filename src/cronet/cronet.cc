@@ -20,7 +20,7 @@ Cronet_EnginePtr CreateCronetEngine() {
 }
 
 
-const std::string PerformRequest(Cronet_EnginePtr cronet_engine, const std::string& url, Cronet_ExecutorPtr executor) {
+const char* PerformRequest(Cronet_EnginePtr cronet_engine, const std::string& url, Cronet_ExecutorPtr executor) {
     UrlRequestCallback url_request_callback;
     Cronet_UrlRequestPtr request = Cronet_UrlRequest_Create();
     Cronet_UrlRequestParamsPtr request_params = Cronet_UrlRequestParams_Create();
@@ -36,23 +36,23 @@ const std::string PerformRequest(Cronet_EnginePtr cronet_engine, const std::stri
     url_request_callback.WaitForDone();
     Cronet_UrlRequest_Destroy(request);
 
-    return url_request_callback.response_as_string();
+    return url_request_callback.response_as_string().c_str();
 }
 
 
-const std::string get(std::string& url) 
+const py::bytes request(std::string& url) 
 {
     Cronet_EnginePtr cronet_engine = CreateCronetEngine();
     std::cout << "Cronet version: " << Cronet_Engine_GetVersionString(cronet_engine) << std::endl;
 
     std::cout << "URL: " << url << std::endl;
     Executor executor;
-    const std::string response = PerformRequest(cronet_engine, url, executor.GetExecutor());
+    const char* response = PerformRequest(cronet_engine, url, executor.GetExecutor());
 
     Cronet_Engine_Shutdown(cronet_engine);
     Cronet_Engine_Destroy(cronet_engine);
 
-    return response;
+    return py::bytes(response);
 }
 
 
@@ -60,5 +60,5 @@ const std::string get(std::string& url)
 PYBIND11_MODULE(cronet, m) {
     m.doc() = "cronet";
 
-    m.def("get", &get, "Get url");
+    m.def("request", &request, "request");
 }
