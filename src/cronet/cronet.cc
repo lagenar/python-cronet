@@ -20,7 +20,20 @@ Cronet_EnginePtr CreateCronetEngine() {
 }
 
 
-const char* PerformRequest(Cronet_EnginePtr cronet_engine, const std::string& url, Cronet_ExecutorPtr executor) {
+struct Response {
+    py::bytes content;
+    int status_code;
+    py::dict headers;
+};
+
+
+const Response handle_request(std::string& url) 
+{
+    Cronet_EnginePtr cronet_engine = CreateCronetEngine();
+    std::cout << "Cronet version: " << Cronet_Engine_GetVersionString(cronet_engine) << std::endl;
+
+    std::cout << "URL: " << url << std::endl;
+    Executor executor;
     UrlRequestCallback url_request_callback;
     Cronet_UrlRequestPtr request = Cronet_UrlRequest_Create();
     Cronet_UrlRequestParamsPtr request_params = Cronet_UrlRequestParams_Create();
@@ -28,7 +41,7 @@ const char* PerformRequest(Cronet_EnginePtr cronet_engine, const std::string& ur
 
     Cronet_UrlRequest_InitWithParams(
         request, cronet_engine, url.c_str(), request_params,
-        url_request_callback.GetUrlRequestCallback(), executor);
+        url_request_callback.GetUrlRequestCallback(), executor.GetExecutor());
     Cronet_UrlRequestParams_Destroy(request_params);
 
     Cronet_UrlRequest_Start(request);
@@ -36,29 +49,27 @@ const char* PerformRequest(Cronet_EnginePtr cronet_engine, const std::string& ur
     url_request_callback.WaitForDone();
     Cronet_UrlRequest_Destroy(request);
 
-    return url_request_callback.response_as_string().c_str();
-}
-
-
-const py::bytes request(std::string& url) 
-{
-    Cronet_EnginePtr cronet_engine = CreateCronetEngine();
-    std::cout << "Cronet version: " << Cronet_Engine_GetVersionString(cronet_engine) << std::endl;
-
-    std::cout << "URL: " << url << std::endl;
-    Executor executor;
-    const char* response = PerformRequest(cronet_engine, url, executor.GetExecutor());
+    const char* content =  url_request_callback.response_as_string().c_str();
 
     Cronet_Engine_Shutdown(cronet_engine);
     Cronet_Engine_Destroy(cronet_engine);
 
-    return py::bytes(response);
+    Response response = {};
+    response.status_code = 200;
+    response.content = content;
+    response.headers = py::dict();
+
+    return response;
 }
 
 
 
 PYBIND11_MODULE(cronet, m) {
     m.doc() = "cronet";
-
-    m.def("request", &request, "request");
+    py::class_<Response>(m, "Response")
+        .def_readonly("status_code", &Response::status_code)
+        .def_readonly("content", &Response::content)
+        .def_readonly("headers", &Response::headers)
+    ;
+    m.def("handle_request", &handle_request, "request");
 }
