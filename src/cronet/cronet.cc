@@ -22,7 +22,7 @@ Cronet_EnginePtr CreateCronetEngine() {
 
 struct Response {
     py::bytes content;
-    int status_code;
+    int32_t status_code;
     py::dict headers;
 };
 
@@ -55,7 +55,7 @@ const Response handle_request(std::string& url)
     Cronet_Engine_Destroy(cronet_engine);
 
     Response response = {};
-    response.status_code = 200;
+    response.status_code = url_request_callback.status_code;
     response.content = content;
     response.headers = py::dict();
 

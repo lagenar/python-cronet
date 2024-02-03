@@ -57,8 +57,9 @@ void UrlRequestCallback::OnReadCompleted(Cronet_UrlRequestPtr request,
 }
 
 void UrlRequestCallback::OnSucceeded(Cronet_UrlRequestPtr request,
-                                           Cronet_UrlResponseInfoPtr info) {
+                                     Cronet_UrlResponseInfoPtr info) {
   std::cout << "OnSucceeded called." << std::endl;
+  status_code = Cronet_UrlResponseInfo_http_status_code_get(info); 
   SignalDone(true);
 }
 

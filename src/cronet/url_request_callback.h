@@ -23,6 +23,7 @@ class UrlRequestCallback {
   std::string last_error_message() const { return last_error_message_; }
   // Returns string representation of the received response.
   std::string response_as_string() const { return response_as_string_; }
+  int32_t status_code;
 
  protected:
   void OnRedirectReceived(Cronet_UrlRequestPtr request,
