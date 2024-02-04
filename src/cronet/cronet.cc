@@ -53,7 +53,8 @@ void RequestContentClose(Cronet_UploadDataProviderPtr self)
 }
 
 
-const Response handle_request(const std::string& url, const std::string& method, std::string& content) 
+const Response handle_request(const std::string& url, const std::string& method, 
+                              std::string& content, const py::dict& headers) 
 {
     Cronet_EnginePtr cronet_engine = CreateCronetEngine();
     std::cout << "Cronet version: " << Cronet_Engine_GetVersionString(cronet_engine) << std::endl;
@@ -71,10 +72,15 @@ const Response handle_request(const std::string& url, const std::string& method,
         &RequestContentRewind,
         &RequestContentClose
     );
-
     Cronet_UploadDataProvider_SetClientContext(upload_data_provider, static_cast<void*>(&content));
-
     Cronet_UrlRequestParams_upload_data_provider_set(request_params, upload_data_provider);
+    
+    for (auto header: headers) {
+        Cronet_HttpHeaderPtr request_header = Cronet_HttpHeader_Create();
+        Cronet_HttpHeader_name_set(request_header, std::string(py::str(header.first)).c_str());
+        Cronet_HttpHeader_value_set(request_header, std::string(py::str(header.second)).c_str());
+        Cronet_UrlRequestParams_request_headers_add(request_params, request_header);
+    }
 
     Cronet_UrlRequest_InitWithParams(
         request, cronet_engine, url.c_str(), request_params,
