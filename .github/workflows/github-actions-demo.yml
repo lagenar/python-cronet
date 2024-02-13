@@ -10,7 +10,7 @@ jobs:
       - run: mkdir chromium
       - run: fetch --nohooks --no-history chromium
         working-directory: ./chromium
-      - run: find .|grep "build"
+      - run: gclient sync
         working-directory: ./chromium
       - run: ./build/install-build-deps.sh
         working-directory: ./chromium/src/
