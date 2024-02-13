@@ -19,3 +19,8 @@ jobs:
         working-directory: ./chromium/src/components/cronet
       - run: ninja -C out/Cronet cronet_package
         working-directory: ./chromium/src/components/cronet
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: Upload
+          path: ./chromium/src/components/cronet/out/Cronet
