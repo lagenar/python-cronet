@@ -10,5 +10,8 @@ jobs:
       - run: mkdir chromium && cd chromium
       - run: fetch --nohooks --no-history chromium
       - run: cd src
-      - run: /build/install-build-deps.sh
+      - run: ./build/install-build-deps.sh
       - run: gclient runhooks
+      - run: cd ./components/cronet
+      - run: gn gen out/Cronet
+      - run: ninja -C out/Cronet cronet_package
