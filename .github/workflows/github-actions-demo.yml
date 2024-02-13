@@ -6,7 +6,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
-      - run: export PATH="$(pwd)/depot_tools:$PATH"
+      - run: echo PATH="$(pwd)/depot_tools:$PATH" >> $GITHUB_ENV
       - run: mkdir chromium && cd chromium
       - run: fetch --nohooks --no-history chromium
       - run: cd src
