@@ -7,12 +7,26 @@
 #include <utility>
 #include <vector>
 #include <tuple>
+#include <pybind11/pybind11.h>
+
 
 #include "cronet_c.h"
 
+
+namespace py = pybind11;
+
+
+struct Response
+{
+    py::bytes content;
+    int32_t status_code;
+    py::dict headers;
+};
+
+
 class UrlRequestCallback {
  public:
-  UrlRequestCallback();
+  UrlRequestCallback(py::object py_callbacks);
   ~UrlRequestCallback();
 
   // Gets Cronet_UrlRequestCallbackPtr implemented by |this|.
@@ -26,7 +40,7 @@ class UrlRequestCallback {
   // Returns string representation of the received response.
   std::string response_as_string() const { return response_as_string_; }
   int32_t status_code;
-  std::vector<std::tuple<std::string, std::string> > headers;
+  py::dict headers;
 
  protected:
   void OnRedirectReceived(Cronet_UrlRequestPtr request,
@@ -93,6 +107,8 @@ class UrlRequestCallback {
   std::future<bool> is_done_ = done_with_success_.get_future();
 
   Cronet_UrlRequestCallbackPtr const callback_;
+
+  py::object py_callbacks_;
 };
 
 #endif  // URL_REQUEST_CALLBACK_H_

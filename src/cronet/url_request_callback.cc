@@ -2,14 +2,16 @@
 
 #include <iostream>
 
-UrlRequestCallback::UrlRequestCallback()
+namespace py = pybind11;
+
+UrlRequestCallback::UrlRequestCallback(py::object py_callbacks)
     : callback_(Cronet_UrlRequestCallback_CreateWith(
           UrlRequestCallback::OnRedirectReceived,
           UrlRequestCallback::OnResponseStarted,
           UrlRequestCallback::OnReadCompleted,
           UrlRequestCallback::OnSucceeded,
           UrlRequestCallback::OnFailed,
-          UrlRequestCallback::OnCanceled)) {
+          UrlRequestCallback::OnCanceled)), py_callbacks_(py_callbacks) {
   Cronet_UrlRequestCallback_SetClientContext(callback_, this);
 }
 
@@ -33,10 +35,18 @@ void UrlRequestCallback::OnResponseStarted(
     Cronet_UrlRequestPtr request,
     Cronet_UrlResponseInfoPtr info) {
   std::cout << "OnResponseStarted called." << std::endl;
-  std::cout << "HTTP Status: "
-            << Cronet_UrlResponseInfo_http_status_code_get(info) << " "
-            << Cronet_UrlResponseInfo_http_status_text_get(info) << std::endl;
-  // Create and allocate 32kb buffer.
+  status_code = Cronet_UrlResponseInfo_http_status_code_get(info);
+  int headers_size = Cronet_UrlResponseInfo_all_headers_list_size(info);
+  py::gil_scoped_acquire acquire;
+  for (int i = 0; i < headers_size; i++)
+  { 
+      Cronet_HttpHeaderPtr header = Cronet_UrlResponseInfo_all_headers_list_at(info, i);
+      py::bytes key = py::bytes(Cronet_HttpHeader_name_get(header));
+      py::bytes value = py::bytes(Cronet_HttpHeader_value_get(header));
+      headers[key] = value;
+  }
+  py_callbacks_.attr("on_response_started")(status_code, headers);
+  py::gil_scoped_release release;
   Cronet_BufferPtr buffer = Cronet_Buffer_Create();
   Cronet_Buffer_InitWithAlloc(buffer, 32 * 1024);
   // Started reading the response.
@@ -51,6 +61,11 @@ void UrlRequestCallback::OnReadCompleted(Cronet_UrlRequestPtr request,
             << std::endl;
   std::string last_read_data(
       reinterpret_cast<char*>(Cronet_Buffer_GetData(buffer)), bytes_read);
+  
+  py::gil_scoped_acquire acquire;
+  py_callbacks_.attr("on_read_completed")(last_read_data);
+  py::gil_scoped_release release;
+  
   response_as_string_ += last_read_data;
   // Continue reading the response.
   Cronet_UrlRequest_Read(request, buffer);
@@ -59,14 +74,9 @@ void UrlRequestCallback::OnReadCompleted(Cronet_UrlRequestPtr request,
 void UrlRequestCallback::OnSucceeded(Cronet_UrlRequestPtr request,
                                      Cronet_UrlResponseInfoPtr info) {
   std::cout << "OnSucceeded called." << std::endl;
-  status_code = Cronet_UrlResponseInfo_http_status_code_get(info); 
-  int headers_size = Cronet_UrlResponseInfo_all_headers_list_size(info);
-  for (int i = 0; i < headers_size; i++) {
-    Cronet_HttpHeaderPtr header = Cronet_UrlResponseInfo_all_headers_list_at(info, i);
-    auto h = std::make_tuple(std::string(Cronet_HttpHeader_name_get(header)), std::string(Cronet_HttpHeader_value_get(header)));
-    headers.push_back(h);
-  }
-
+  py::gil_scoped_acquire acquire;
+  py_callbacks_.attr("on_succeeded")();
+  py::gil_scoped_release release;
   SignalDone(true);
 }
 
@@ -76,6 +86,9 @@ void UrlRequestCallback::OnFailed(Cronet_UrlRequestPtr request,
   std::cout << "OnFailed called: " << Cronet_Error_message_get(error)
             << std::endl;
   last_error_message_ = Cronet_Error_message_get(error);
+  py::gil_scoped_acquire acquire;
+  py_callbacks_.attr("on_failed")(last_error_message_);
+  py::gil_scoped_release release;
   SignalDone(false);
 }
 
