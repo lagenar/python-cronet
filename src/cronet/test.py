@@ -1,4 +1,5 @@
 import transport
+import asyncio
 import httpx
 
 headers = {
@@ -17,6 +18,9 @@ headers = {
 }
 
 
-client = httpx.Client(transport=transport.CronetTransport())
-response = client.get("https://wtfismyip.com/json", headers=headers)
-print(response.json())
+async def main():
+    async with httpx.AsyncClient(transport=transport.AsyncCronetTransport()) as client:
+        response = await client.get('https://wtfismyip.com/json')
+        print(response, response.text)
+
+asyncio.run(main())
