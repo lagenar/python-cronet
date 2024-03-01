@@ -240,6 +240,8 @@ static PyObject *Cronet_request(CronetObject *self, PyObject *args) {
   PyObject* url = PyObject_GetAttrString(py_request, "url");
   PyObject* method = PyObject_GetAttrString(py_request, "method");
   PyObject* content = PyObject_GetAttrString(py_request, "content");
+  PyObject* headers = PyObject_GetAttrString(py_request, "headers");
+  
 
   const char *c_url = PyUnicode_AsUTF8(url);
   const char *c_method = PyUnicode_AsUTF8(method);
@@ -262,6 +264,24 @@ static PyObject *Cronet_request(CronetObject *self, PyObject *args) {
     Cronet_UrlRequestParams_upload_data_provider_set(request_params, data_provider);
   }
   
+  if (!Py_IsNone(headers)) {
+    PyObject *items = PyDict_Items(headers);
+    Py_ssize_t size = PyList_Size(items);
+    for (Py_ssize_t i = 0; i < size; i++) {
+      PyObject *item = PyList_GetItem(items, i);
+
+      PyObject *key_obj = PyTuple_GetItem(item, 0);
+      PyObject* value_obj = PyTuple_GetItem(item, 1);
+
+      const char* key = PyUnicode_AsUTF8(key_obj);
+      const char* value = PyUnicode_AsUTF8(value_obj);
+      Cronet_HttpHeaderPtr request_header = Cronet_HttpHeader_Create();
+      Cronet_HttpHeader_name_set(request_header, key);
+      Cronet_HttpHeader_value_set(request_header, value);
+      Cronet_UrlRequestParams_request_headers_add(request_params, request_header);
+    }
+  }
+
   Cronet_UrlRequestCallbackPtr callback = Cronet_UrlRequestCallback_CreateWith(
       &on_redirect_received, &on_response_started, &on_read_completed,
       &on_succeeded, &on_failed, &on_canceled);

@@ -6,6 +6,7 @@ class Request:
     url: str
     method: str
     content: bytes
+    headers: dict[str, str]
 
     def on_redirect_received(self, location: str):
         print("redirected to", location)
@@ -26,7 +27,7 @@ class Request:
         print('request canceled')
 
 
-req = Request(url='https://httpbin.org/post', method='POST', content=b'test')
+req = Request(url='https://httpbin.org/post', method='POST', content=b'test', headers={'a': '1', "hola": "abc"})
 engine = cronet.Cronet()
 engine.request(req)
 
