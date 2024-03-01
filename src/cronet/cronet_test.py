@@ -5,6 +5,7 @@ import cronet
 class Request:
     url: str
     method: str
+    content: bytes
 
     def on_redirect_received(self, location: str):
         print("redirected to", location)
@@ -25,7 +26,7 @@ class Request:
         print('request canceled')
 
 
-req = Request(url='https://google.com', method='GET')
+req = Request(url='https://httpbin.org/post', method='POST', content=b'test')
 engine = cronet.Cronet()
 engine.request(req)
 
