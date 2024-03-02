@@ -90,11 +90,13 @@ class Cronet:
         timeout: Optional[float] = None
     ):
         req = Request(url=url, method=method, content=content, headers=headers)
-        self._engine.request(req)
+        cronet_req = self._engine.request(req)
         try:
             req.wait_until_done(timeout=timeout)
         except TimeoutError:
-            self._engine.cancel(req)
+            self._engine.cancel(cronet_req)
+            req.wait_until_done()
+            raise
 
         return req.response
 

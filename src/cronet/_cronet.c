@@ -249,8 +249,8 @@ static PyObject *CronetEngine_request(CronetEngineObject *self, PyObject *args) 
     perror("failed to parse arguments\n");
     Py_RETURN_NONE;
   }
-  Py_IncRef(py_request);
-
+  
+  Py_INCREF(py_request);
   PyObject* url = PyObject_GetAttrString(py_request, "url");
   PyObject* method = PyObject_GetAttrString(py_request, "method");
   PyObject* content = PyObject_GetAttrString(py_request, "content");
@@ -304,12 +304,31 @@ static PyObject *CronetEngine_request(CronetEngineObject *self, PyObject *args) 
   Cronet_UrlRequest_Start(request);
 
   LOG("Scheduled request");
+  return PyCapsule_New(request, NULL, NULL);
+}
+
+
+static PyObject *CronetEngine_cancel(CronetEngineObject *self, PyObject *args) {
+  PyObject *capsule = NULL;
+  if (!PyArg_ParseTuple(args, "O", &capsule)) {
+    perror("failed to parse arguments\n");
+    Py_RETURN_NONE;
+  }
+
+  void *request = PyCapsule_GetPointer(capsule, NULL);
+  if (request) {
+    Cronet_UrlRequest_Cancel((Cronet_UrlRequestPtr)request);
+  }
+
   Py_RETURN_NONE;
 }
+
 
 static PyMethodDef CronetEngine_methods[] = {
     {"request", (PyCFunction)CronetEngine_request, METH_VARARGS,
      "Run a request"},
+    {"cancel", (PyCFunction)CronetEngine_cancel, METH_VARARGS,
+    "Cancel a request"},
     {NULL} /* Sentinel */
 };
 
