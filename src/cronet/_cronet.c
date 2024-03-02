@@ -47,6 +47,7 @@ void execute_runnable(Cronet_ExecutorPtr executor,
   }
 }
 
+
 /* executor thread that waits for runnables and starts them.
 */
 void *process_requests(void *runnable) {
@@ -61,15 +62,15 @@ void *process_requests(void *runnable) {
     }
     pthread_mutex_unlock(&run->runnable_mutex);
   }
-  printf("Returning from thread\n");
   return NULL;
 }
+
 
 void on_redirect_received(Cronet_UrlRequestCallbackPtr callback,
                           Cronet_UrlRequestPtr request,
                           Cronet_UrlResponseInfoPtr info,
                           Cronet_String newLocationUrl) {
-  PyObject *py_request = (PyObject*)Cronet_UrlRequest_GetClientContext(request); 
+  PyObject *py_request = (PyObject*)Cronet_UrlRequest_GetClientContext(request);
   PyGILState_STATE gstate;
   gstate = PyGILState_Ensure();
   PyObject_CallMethod(py_request, "on_redirect_received", 
@@ -78,6 +79,7 @@ void on_redirect_received(Cronet_UrlRequestCallbackPtr callback,
   Cronet_UrlRequest_FollowRedirect(request);
 }
 
+
 void on_response_started(Cronet_UrlRequestCallbackPtr callback,
                          Cronet_UrlRequestPtr request,
                          Cronet_UrlResponseInfoPtr info) {
@@ -85,7 +87,6 @@ void on_response_started(Cronet_UrlRequestCallbackPtr callback,
   int status_code = Cronet_UrlResponseInfo_http_status_code_get(info);
   int headers_size = Cronet_UrlResponseInfo_all_headers_list_size(info);
   const char *url = Cronet_UrlResponseInfo_url_get(info);
-  
   PyGILState_STATE gstate;
   gstate = PyGILState_Ensure();
   PyObject *headers = PyDict_New();
@@ -99,11 +100,11 @@ void on_response_started(Cronet_UrlRequestCallbackPtr callback,
   PyObject_CallMethod(py_request, "on_response_started", "siO", 
                       url, status_code, headers);
   PyGILState_Release(gstate);
-  
   Cronet_BufferPtr buffer = Cronet_Buffer_Create();
   Cronet_Buffer_InitWithAlloc(buffer, 32 * 1024);
   Cronet_UrlRequest_Read(request, buffer);
 }
+
 
 void on_read_completed(Cronet_UrlRequestCallbackPtr callback,
                        Cronet_UrlRequestPtr request,
@@ -120,6 +121,7 @@ void on_read_completed(Cronet_UrlRequestCallbackPtr callback,
   Cronet_UrlRequest_Read(request, buffer);
 }
 
+
 void on_succeeded(Cronet_UrlRequestCallbackPtr callback,
                   Cronet_UrlRequestPtr request,
                   Cronet_UrlResponseInfoPtr info) {
@@ -133,6 +135,7 @@ void on_succeeded(Cronet_UrlRequestCallbackPtr callback,
   
   Cronet_UrlRequest_Destroy(request);
 }
+
 
 void on_failed(Cronet_UrlRequestCallbackPtr callback,
                Cronet_UrlRequestPtr request, Cronet_UrlResponseInfoPtr info,
@@ -149,6 +152,7 @@ void on_failed(Cronet_UrlRequestCallbackPtr callback,
   
   Cronet_UrlRequest_Destroy(request);
 }
+
 
 void on_canceled(Cronet_UrlRequestCallbackPtr callback,
                  Cronet_UrlRequestPtr request, Cronet_UrlResponseInfoPtr info) {
@@ -171,6 +175,7 @@ int64_t request_content_length(Cronet_UploadDataProviderPtr self)
     return strlen((const char*)content);
 }
 
+
 void request_content_read(Cronet_UploadDataProviderPtr self, 
                           Cronet_UploadDataSinkPtr upload_data_sink, 
                           Cronet_BufferPtr buffer)
@@ -184,14 +189,17 @@ void request_content_read(Cronet_UploadDataProviderPtr self,
     Cronet_UploadDataSink_OnReadSucceeded(upload_data_sink, content_size, false);
 }
 
+
 void request_content_rewind(Cronet_UploadDataProviderPtr self, 
                             Cronet_UploadDataSinkPtr upload_data_sink)
 {
 }
 
+
 void request_content_close(Cronet_UploadDataProviderPtr self)
 {
 }
+
 
 typedef struct {
   PyObject_HEAD 
@@ -211,16 +219,32 @@ static void CronetEngine_dealloc(CronetEngineObject *self) {
   Py_TYPE(self)->tp_free((PyObject *)self);
 }
 
+
 static int CronetEngine_init(CronetEngineObject *self, PyObject *args, PyObject *kwds) {
   self->engine = Cronet_Engine_Create();
+  bool engine_running = false;
   Cronet_EngineParamsPtr engine_params = Cronet_EngineParams_Create();
+  if (!self->engine || !engine_params) {
+    PyErr_SetString(PyExc_RuntimeError, "Could not create engine");
+    goto fail;
+  }
   Cronet_EngineParams_http_cache_mode_set(
       engine_params, Cronet_EngineParams_HTTP_CACHE_MODE_DISABLED);
   Cronet_EngineParams_enable_quic_set(engine_params, false);
-  Cronet_EngineParams_user_agent_set(engine_params, "Cronet");
-  Cronet_Engine_StartWithParams(self->engine, engine_params);
+  Cronet_EngineParams_user_agent_set(engine_params, "python-cronet");
+  Cronet_RESULT res = Cronet_Engine_StartWithParams(self->engine, engine_params);
+  if (res < 0) {
+    PyErr_Format(PyExc_RuntimeError, "Could not start engine(%d)", res);
+    goto fail;
+  }
+  engine_running = true;
   Cronet_EngineParams_Destroy(engine_params);
+  engine_params = NULL;
   self->executor = Cronet_Executor_CreateWith(&execute_runnable);
+  if (!self->executor) {
+    PyErr_SetString(PyExc_RuntimeError, "Could not create executor");
+    goto fail;
+  }
   self->executor_runnable = (ExecutorRunnable){
       .runnable = NULL,
       .cond = PTHREAD_COND_INITIALIZER,
@@ -233,34 +257,65 @@ static int CronetEngine_init(CronetEngineObject *self, PyObject *args, PyObject 
   pthread_t executor_t;
   if (pthread_create(&executor_t, NULL, process_requests,
                      (void *)&self->executor_runnable) != 0) {
-    perror("pthread_create failed");
-    return 1;
+    PyErr_SetString(PyExc_RuntimeError, "Could not start executor thread");
+    goto fail;
   }
-
   LOG("Started cronet engine");
-
   return 0;
+
+fail:
+  if (engine_running) {
+    Cronet_Engine_Shutdown(self->engine);
+  }
+  if (self->executor) {
+    Cronet_Executor_Destroy(self->executor);
+  }
+  if (engine_params) {
+    Cronet_EngineParams_Destroy(engine_params);
+  }
+  if (self->engine) {
+    Cronet_Engine_Destroy(self->engine);
+  }
+  return -1;
 }
 
+  
 static PyObject *CronetEngine_request(CronetEngineObject *self, PyObject *args) {
-  /* TODO: add validation, destroy request level data after the request is done */
   PyObject *py_request = NULL;
   if (!PyArg_ParseTuple(args, "O", &py_request)) {
-    perror("failed to parse arguments\n");
-    Py_RETURN_NONE;
+    return NULL;
+  }
+  PyObject* url = PyObject_GetAttrString(py_request, "url");
+  if (!url) {
+    return NULL;
+  }
+  PyObject* method = PyObject_GetAttrString(py_request, "method");
+  if (!method) {
+    return NULL;
+  }
+  PyObject* content = PyObject_GetAttrString(py_request, "content");
+  if (!content) {
+    return NULL;
+  }
+  PyObject* headers = PyObject_GetAttrString(py_request, "headers");
+  if (!headers) {
+    return NULL;
   }
   
-  Py_INCREF(py_request);
-  PyObject* url = PyObject_GetAttrString(py_request, "url");
-  PyObject* method = PyObject_GetAttrString(py_request, "method");
-  PyObject* content = PyObject_GetAttrString(py_request, "content");
-  PyObject* headers = PyObject_GetAttrString(py_request, "headers");
-  
   const char *c_url = PyUnicode_AsUTF8(url);
+  if (!c_url) {
+    return NULL;
+  }
   const char *c_method = PyUnicode_AsUTF8(method);
+  if (!c_method) {
+    return NULL;
+  }
   char *c_content = NULL;
   if (!Py_IsNone(content)) {
     c_content = PyBytes_AsString(content);
+    if (!c_content) {
+      return NULL;
+    }
   }
 
   Cronet_UrlRequestPtr request = Cronet_UrlRequest_Create();
@@ -279,13 +334,31 @@ static PyObject *CronetEngine_request(CronetEngineObject *self, PyObject *args) 
   
   if (!Py_IsNone(headers)) {
     PyObject *items = PyDict_Items(headers);
+    if (!items) {
+      return NULL;
+    }
     Py_ssize_t size = PyList_Size(items);
     for (Py_ssize_t i = 0; i < size; i++) {
       PyObject *item = PyList_GetItem(items, i);
+      if (!item) {
+        return NULL;
+      }
       PyObject *key_obj = PyTuple_GetItem(item, 0);
+      if (!key_obj) {
+        return NULL;
+      }
       PyObject* value_obj = PyTuple_GetItem(item, 1);
+      if (!value_obj) {
+        return NULL;
+      }
       const char* key = PyUnicode_AsUTF8(key_obj);
+      if (!key) {
+        return NULL;  
+      }
       const char* value = PyUnicode_AsUTF8(value_obj);
+      if (!value) {
+        return NULL;
+      }
       Cronet_HttpHeaderPtr request_header = Cronet_HttpHeader_Create();
       Cronet_HttpHeader_name_set(request_header, key);
       Cronet_HttpHeader_value_set(request_header, value);
@@ -293,6 +366,7 @@ static PyObject *CronetEngine_request(CronetEngineObject *self, PyObject *args) 
     }
   }
 
+  Py_INCREF(py_request);
   Cronet_UrlRequestCallbackPtr callback = Cronet_UrlRequestCallback_CreateWith(
       &on_redirect_received, &on_response_started, &on_read_completed,
       &on_succeeded, &on_failed, &on_canceled);
@@ -301,25 +375,28 @@ static PyObject *CronetEngine_request(CronetEngineObject *self, PyObject *args) 
   Cronet_UrlRequest_InitWithParams(request, self->engine, c_url, request_params,
                                    callback, self->executor);
   Cronet_UrlRequestParams_Destroy(request_params);
+  PyObject *capsule = PyCapsule_New(request, NULL, NULL);
+  if (!capsule) {
+    Py_DECREF(py_request);
+    Cronet_UrlRequest_Destroy(request);
+    return NULL;
+  }
   Cronet_UrlRequest_Start(request);
-
   LOG("Scheduled request");
-  return PyCapsule_New(request, NULL, NULL);
+  return capsule;
 }
 
 
 static PyObject *CronetEngine_cancel(CronetEngineObject *self, PyObject *args) {
   PyObject *capsule = NULL;
   if (!PyArg_ParseTuple(args, "O", &capsule)) {
-    perror("failed to parse arguments\n");
-    Py_RETURN_NONE;
+    return NULL;
   }
-
   void *request = PyCapsule_GetPointer(capsule, NULL);
-  if (request) {
-    Cronet_UrlRequest_Cancel((Cronet_UrlRequestPtr)request);
+  if (!request) {
+    return NULL;
   }
-
+  Cronet_UrlRequest_Cancel((Cronet_UrlRequestPtr)request);
   Py_RETURN_NONE;
 }
 
@@ -332,6 +409,7 @@ static PyMethodDef CronetEngine_methods[] = {
     {NULL} /* Sentinel */
 };
 
+
 static PyTypeObject CronetEngineType = {
     .ob_base = PyVarObject_HEAD_INIT(NULL, 0).tp_name = "_cronet.CronetEngine",
     .tp_doc = PyDoc_STR("Cronet engine"),
@@ -343,6 +421,7 @@ static PyTypeObject CronetEngineType = {
     .tp_dealloc = (destructor)CronetEngine_dealloc,
     .tp_methods = CronetEngine_methods,
 };
+
 
 static PyModuleDef cronetmodule = {
     .m_base = PyModuleDef_HEAD_INIT,

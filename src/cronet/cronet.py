@@ -3,6 +3,8 @@ from functools import cached_property
 from typing import Optional
 import _cronet
 import threading
+import gc
+import sys
 
 
 @dataclass
@@ -91,6 +93,8 @@ class Cronet:
     ):
         req = Request(url=url, method=method, content=content, headers=headers)
         cronet_req = self._engine.request(req)
+        print(sys.getrefcount(cronet_req))
+        
         try:
             req.wait_until_done(timeout=timeout)
         except TimeoutError:
@@ -103,5 +107,5 @@ class Cronet:
 
 if __name__ == "__main__":
     with Cronet() as cr:
-        response = cr.request("https://httpbin.org/delay/10", timeout=5.0)
+        response = cr.request("https://httpbin.org/get", timeout=5.0)
         print(response)
