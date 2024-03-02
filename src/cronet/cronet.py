@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from functools import cached_property
 from typing import Optional
 import _cronet
 import threading
@@ -19,9 +20,10 @@ class Request:
     def on_redirect_received(self, location: str):
         print("redirected to", location)
 
-    def on_response_started(self, status_code: int, headers: dict[str, str]):
-        self._response = Response(status_code=status_code, headers=headers, 
-                                  content=None)
+    def on_response_started(self, url: str, status_code: int, headers: dict[str, str]):
+        self._response = Response(
+            url=url, status_code=status_code, headers=headers, content=None
+        )
 
     def on_read_completed(self, data: bytes):
         self._response_content.extend(data)
@@ -32,28 +34,32 @@ class Request:
         self._done.set()
 
     def on_failed(self, error: str):
-        print('Request failed', error)
+        print("Request failed", error)
         self._done.set()
 
     def on_canceled(self):
-        print('request canceled')
+        print("request canceled")
         self._done.set()
-    
-    def wait_until_done(self):
-        self._done.wait()
+
+    def wait_until_done(self, timeout: Optional[float] = None):
+        if not self._done.wait(timeout=timeout):
+            raise TimeoutError()
 
     @property
     def response(self):
         return self._response
 
 
-
 @dataclass
 class Response:
     status_code: int
     headers: dict[str, str]
-    #url: str
+    url: str
     content: Optional[bytes]
+
+    @cached_property
+    def text(self):
+        return self.content.decode("utf8")
 
 
 class Cronet:
@@ -74,15 +80,26 @@ class Cronet:
         if self._engine:
             del self._engine
 
-    def request(self, url, *, method="GET", content=None, headers=None):
+    def request(
+        self,
+        url: str,
+        *,
+        method: str = "GET",
+        content: Optional[bytes] = None,
+        headers: Optional[dict[str, str]] = None,
+        timeout: Optional[float] = None
+    ):
         req = Request(url=url, method=method, content=content, headers=headers)
         self._engine.request(req)
-        req.wait_until_done()
+        try:
+            req.wait_until_done(timeout=timeout)
+        except TimeoutError:
+            self._engine.cancel(req)
+
         return req.response
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     with Cronet() as cr:
-        response = cr.request("https://example.com")
+        response = cr.request("https://httpbin.org/delay/10", timeout=5.0)
         print(response)
-

@@ -84,6 +84,7 @@ void on_response_started(Cronet_UrlRequestCallbackPtr callback,
   PyObject *py_request = (PyObject*)Cronet_UrlRequest_GetClientContext(request); 
   int status_code = Cronet_UrlResponseInfo_http_status_code_get(info);
   int headers_size = Cronet_UrlResponseInfo_all_headers_list_size(info);
+  const char *url = Cronet_UrlResponseInfo_url_get(info);
   
   PyGILState_STATE gstate;
   gstate = PyGILState_Ensure();
@@ -95,7 +96,8 @@ void on_response_started(Cronet_UrlRequestCallbackPtr callback,
       PyObject *item = PyUnicode_FromStringAndSize(value, strlen(value));
       PyDict_SetItemString(headers, key, item);
   }
-  PyObject_CallMethod(py_request, "on_response_started", "iO", status_code, headers);
+  PyObject_CallMethod(py_request, "on_response_started", "siO", 
+                      url, status_code, headers);
   PyGILState_Release(gstate);
   
   Cronet_BufferPtr buffer = Cronet_Buffer_Create();
@@ -207,11 +209,6 @@ static void CronetEngine_dealloc(CronetEngineObject *self) {
   Cronet_Engine_Shutdown(self->engine);
   Cronet_Engine_Destroy(self->engine);
   Py_TYPE(self)->tp_free((PyObject *)self);
-}
-
-
-static void CronetEngine_shutdown(CronetEngineObject *self) {
-  
 }
 
 static int CronetEngine_init(CronetEngineObject *self, PyObject *args, PyObject *kwds) {
