@@ -1,9 +1,8 @@
 from dataclasses import dataclass
 from functools import cached_property
 from typing import Optional
-import _cronet
+from . import _cronet
 import threading
-import gc
 import sys
 
 
@@ -94,7 +93,7 @@ class Cronet:
         req = Request(url=url, method=method, content=content, headers=headers)
         cronet_req = self._engine.request(req)
         print(sys.getrefcount(cronet_req))
-        
+
         try:
             req.wait_until_done(timeout=timeout)
         except TimeoutError:
