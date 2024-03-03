@@ -12,7 +12,7 @@ setup(
             include_dirs=include_dirs,
             library_dirs=lib_dirs,
             runtime_library_dirs=lib_dirs,
-            libraries=["cronet.123.0.6300.0"],
+            libraries=["cronet.122.0.6261.90"],
             extra_compile_args=[],
             sources=["src/cronet/_cronet.c"],
         ),

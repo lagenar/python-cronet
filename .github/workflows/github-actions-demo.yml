@@ -1,5 +1,5 @@
-name: GitHub Actions Demo
-run-name: ${{ github.actor }} is testing out GitHub Actions 🚀
+name: Build cronet
+run-name: Build cronet
 on: [push]
 jobs:
   Explore-GitHub-Actions:
@@ -9,7 +9,7 @@ jobs:
       - run: git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
       - run: echo PATH="$(pwd)/depot_tools:$PATH" >> $GITHUB_ENV
       - run: mkdir chromium
-      - run: fetch --nohooks --no-history chromium
+      - run: git clone --depth 1 --single-branch --branch v122.0.6261.90 git@github.com:chromium/chromium.git
         working-directory: ./chromium
       - run: gclient sync
         working-directory: ./chromium
@@ -22,5 +22,5 @@ jobs:
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: Upload
+          name: cronet
           path: ./chromium/src/components/cronet/out/Cronet
