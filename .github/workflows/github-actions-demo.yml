@@ -13,7 +13,7 @@ jobs:
         working-directory: ./chromium
       - run: echo 'target_os = ["linux"]' >> .gclient
         working-directory: ./chromium
-      - run: gclient sync --no-history
+      - run: gclient sync --no-history --nohooks
         working-directory: ./chromium
       - run: ./build/install-build-deps.sh
         working-directory: ./chromium/src/
