@@ -1,0 +1,26 @@
+name: GitHub Actions Demo
+run-name: ${{ github.actor }} is testing out GitHub Actions 🚀
+on: [push]
+jobs:
+  Explore-GitHub-Actions:
+    runs-on: ubuntu-latest
+    steps:
+      - run: rm -rf /opt/hostedtoolcache
+      - run: git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
+      - run: echo PATH="$(pwd)/depot_tools:$PATH" >> $GITHUB_ENV
+      - run: mkdir chromium
+      - run: fetch --nohooks --no-history chromium
+        working-directory: ./chromium
+      - run: gclient sync
+        working-directory: ./chromium
+      - run: ./build/install-build-deps.sh
+        working-directory: ./chromium/src/
+      - run: gn gen out/Cronet
+        working-directory: ./chromium/src/components/cronet
+      - run: ninja -C out/Cronet cronet_package
+        working-directory: ./chromium/src/components/cronet
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: Upload
+          path: ./chromium/src/components/cronet/out/Cronet
