@@ -9,7 +9,7 @@ jobs:
       - run: git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
       - run: echo PATH="$(pwd)/depot_tools:$PATH" >> $GITHUB_ENV
       - run: mkdir chromium
-      - run: git clone --depth 1 --single-branch --branch v122.0.6261.90 https://github.com/chromium/chromium.git
+      - run: git clone --depth 1 --single-branch --branch 122.0.6261.90 https://github.com/chromium/chromium.git
         working-directory: ./chromium
       - run: gclient sync
         working-directory: ./chromium
