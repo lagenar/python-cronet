@@ -9,11 +9,11 @@ jobs:
       - run: git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
       - run: echo PATH="$(pwd)/depot_tools:$PATH" >> $GITHUB_ENV
       - run: mkdir chromium
-      - run: gclient config https://chromium.googlesource.com/chromium/src.git
+      - run: gclient config https://chromium.googlesource.com/chromium/src.git@122.0.6261.90
         working-directory: ./chromium
       - run: echo 'target_os = ["linux"]' >> .gclient
         working-directory: ./chromium
-      - run: gclient sync --no-history --with_branch_heads --with_tags
+      - run: gclient sync --no-history --no-hooks
         working-directory: ./chromium
       - run: ./build/install-build-deps.sh
         working-directory: ./chromium/src/
