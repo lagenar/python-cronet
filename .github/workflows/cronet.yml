@@ -1,8 +1,7 @@
 name: Build cronet
 run-name: Build cronet
-on: [push]
 jobs:
-  Explore-GitHub-Actions:
+  Build-Cronet:
     runs-on: ubuntu-latest
     steps:
       - name: Maximize build space
