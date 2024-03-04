@@ -47,4 +47,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: cronet
-          path: ./chromium/src/components/cronet/out/Cronet
+          path: |
+            ./chromium/src/components/cronet/out/Cronet/*.so
+            ./chromium/src/components/cronet/out/Cronet/include/
