@@ -25,7 +25,7 @@ jobs:
         working-directory: ./chromium
       - run: gclient sync --no-history --nohooks --with_branch_heads --with_tags
         working-directory: ./chromium
-      - run: git checkout -b cronet_build branch-heads/122.0.6261.90
+      - run: git checkout -b cronet_build 122.0.6261.90
         working-directory: ./chromium/src
       - run: gclient sync --with_branch_heads --with_tags
         working-directory: gclient sync --with_branch_heads --with_tags --no-history
