@@ -21,6 +21,18 @@ jobs:
       - run: mkdir chromium
       - run: git clone -b 122.0.6261.90 --depth=2 https://chromium.googlesource.com/chromium/src
         working-directory: ./chromium
+      - name: Write .gclient file
+        run: |
+          echo 'solutions = [
+            {
+              "name": "src",
+              "url": "https://chromium.googlesource.com/chromium/src.git",
+              "managed": False,
+              "custom_deps": {},
+              "custom_vars": {},
+            },
+          ]' > .gclient
+        working-directory: ./chromium
       - run: gclient sync --no-history --nohooks
         working-directory: ./chromium
       - run: ./build/install-build-deps.sh
