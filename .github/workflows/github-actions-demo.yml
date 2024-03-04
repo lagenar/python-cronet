@@ -5,7 +5,17 @@ jobs:
   Explore-GitHub-Actions:
     runs-on: ubuntu-latest
     steps:
+      - name: Maximize build space
+        uses: easimon/maximize-build-space@master
+        with:
+          root-reserve-mb: 512
+          swap-size-mb: 1024
+          remove-dotnet: 'true'
       - run: rm -rf /opt/hostedtoolcache
+      - name: Build
+        run: |
+          echo "Free space:"
+          df -h
       - run: git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
       - run: echo PATH="$(pwd)/depot_tools:$PATH" >> $GITHUB_ENV
       - run: mkdir chromium
