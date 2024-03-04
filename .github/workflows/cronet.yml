@@ -12,7 +12,7 @@ jobs:
           swap-size-mb: 1024
           remove-dotnet: 'true'
       - run: rm -rf /opt/hostedtoolcache
-      - name: Build
+      - name: Free space
         run: |
           echo "Free space:"
           df -h
@@ -43,10 +43,10 @@ jobs:
         working-directory: ./chromium/src/components/cronet
       - run: ninja -C out/Cronet cronet_package
         working-directory: ./chromium/src/components/cronet
-      - name: Upload
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: cronet
           path: |
             ./chromium/src/components/cronet/out/Cronet/*.so
-            ./chromium/src/components/cronet/out/Cronet/include/
+            ./chromium/src/components/cronet/out/Cronet/cronet/include/
