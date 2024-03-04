@@ -1,5 +1,7 @@
 name: Build cronet
 run-name: Build cronet
+on:
+  workflow_dispatch:
 jobs:
   Build-Cronet:
     runs-on: ubuntu-latest
