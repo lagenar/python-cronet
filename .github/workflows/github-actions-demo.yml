@@ -16,21 +16,16 @@ jobs:
         run: |
           echo "Free space:"
           df -h
-      - run: git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
+      - run: git clone --depth 1 https://chromium.googlesource.com/chromium/tools/depot_tools.git
       - run: echo PATH="$(pwd)/depot_tools:$PATH" >> $GITHUB_ENV
       - run: mkdir chromium
-      - run: fetch --no-history --nohooks chromium
+      - run: git clone -b 122.0.6261.90 --depth=2 https://chromium.googlesource.com/chromium/src
         working-directory: ./chromium
-      - run: echo 'target_os = ["linux"]' >> .gclient
+      - run: gclient sync --no-history --nohooks
         working-directory: ./chromium
-      - run: gclient sync --no-history --nohooks --with_branch_heads --with_tags
-        working-directory: ./chromium
-      - run: git checkout 122.0.6261.90
-        working-directory: ./chromium/src
-      - run: gclient sync --with_branch_heads --with_tags
-        working-directory: gclient sync --with_branch_heads --with_tags --no-history
       - run: ./build/install-build-deps.sh
         working-directory: ./chromium/src/
+      - run: gclient runhooks
       - run: gn gen out/Cronet
         working-directory: ./chromium/src/components/cronet
       - run: ninja -C out/Cronet cronet_package
