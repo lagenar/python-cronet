@@ -38,6 +38,7 @@ jobs:
       - run: ./build/install-build-deps.sh
         working-directory: ./chromium/src/
       - run: gclient runhooks
+        working-directory: ./chromium
       - run: gn gen out/Cronet
         working-directory: ./chromium/src/components/cronet
       - run: ninja -C out/Cronet cronet_package
