@@ -19,7 +19,7 @@ jobs:
       - run: git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
       - run: echo PATH="$(pwd)/depot_tools:$PATH" >> $GITHUB_ENV
       - run: mkdir chromium
-      - run: gclient config https://chromium.googlesource.com/chromium/src.git@
+      - run: fetch --no-history --nohooks chromium
         working-directory: ./chromium
       - run: echo 'target_os = ["linux"]' >> .gclient
         working-directory: ./chromium
