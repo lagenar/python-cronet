@@ -3,7 +3,11 @@ from functools import cached_property
 from typing import Optional
 from . import _cronet
 import threading
-import sys
+
+
+
+class CronetException(Exception):
+    pass
 
 
 @dataclass
@@ -17,6 +21,7 @@ class Request:
         self._response = None
         self._response_content = bytearray()
         self._done = threading.Event()
+        self._exc = None
 
     def on_redirect_received(self, location: str):
         pass
@@ -34,6 +39,7 @@ class Request:
         self._done.set()
 
     def on_failed(self, error: str):
+        self._exc = CronetException(error)
         self._done.set()
 
     def on_canceled(self):
@@ -42,6 +48,8 @@ class Request:
     def wait_until_done(self, timeout: Optional[float] = None):
         if not self._done.wait(timeout=timeout):
             raise TimeoutError()
+        if self._exc:
+            raise self._exc
 
     @property
     def response(self):
@@ -96,12 +104,10 @@ class Cronet:
             self._engine.cancel(cronet_req)
             req.wait_until_done()
             raise
+        except CronetException:
+            raise
 
-        response = req.response
-        del req
-        del cronet_req
-
-        return response
+        return req.response
 
 
 if __name__ == "__main__":
