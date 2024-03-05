@@ -19,7 +19,7 @@ class Request:
         self._done = threading.Event()
 
     def on_redirect_received(self, location: str):
-        print("redirected to", location)
+        pass
 
     def on_response_started(self, url: str, status_code: int, headers: dict[str, str]):
         self._response = Response(
@@ -30,16 +30,13 @@ class Request:
         self._response_content.extend(data)
 
     def on_succeeded(self):
-        print("Success")
         self._response.content = bytes(self._response_content)
         self._done.set()
 
     def on_failed(self, error: str):
-        print("Request failed", error)
         self._done.set()
 
     def on_canceled(self):
-        print("request canceled")
         self._done.set()
 
     def wait_until_done(self, timeout: Optional[float] = None):
@@ -75,7 +72,8 @@ class Cronet:
         self.stop()
 
     def start(self):
-        self._engine = _cronet.CronetEngine()
+        if not self._engine:
+            self._engine = _cronet.CronetEngine()
 
     def stop(self):
         if self._engine:
@@ -92,8 +90,6 @@ class Cronet:
     ):
         req = Request(url=url, method=method, content=content, headers=headers)
         cronet_req = self._engine.request(req)
-        print(sys.getrefcount(cronet_req))
-
         try:
             req.wait_until_done(timeout=timeout)
         except TimeoutError:
@@ -101,7 +97,11 @@ class Cronet:
             req.wait_until_done()
             raise
 
-        return req.response
+        response = req.response
+        del req
+        del cronet_req
+
+        return response
 
 
 if __name__ == "__main__":

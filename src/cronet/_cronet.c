@@ -389,6 +389,9 @@ static PyObject *CronetEngine_request(CronetEngineObject *self, PyObject *args) 
       &on_succeeded, &on_failed, &on_canceled);
   
   RequestContext *ctx = (RequestContext*)malloc(sizeof(RequestContext));
+  if (!ctx) {
+    abort();
+  }
   ctx->callback = NULL;
   ctx->py_request = py_request;
   Cronet_UrlRequest_SetClientContext(request, (void*)ctx);

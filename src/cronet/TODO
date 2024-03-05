@@ -1,15 +1,7 @@
-- Response object
-- Python Callbacks 
-- Reference counts and error handling in c module
-- Handle shutdown gracefully
+- Apply proxy patch on cronet build
+- 
 - Async support
 - Canceling of requests
 - Proxy support
 - Raise errors as exceptions
-- Timeouts
 - Automate build
-
-
-with cronet.Cronet() as engine:
-    Request()
-    response = engine.get()
