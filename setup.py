@@ -1,10 +1,10 @@
 from setuptools import Extension, setup
 
-lib_dirs = ["src/cronet/lib"]
-include_dirs = ["src/cronet/include"]
+lib_dirs = ["src/cronet/build"]
+include_dirs = ["src/cronet/build/include"]
 
 setup(
-    package_data={"cronet": ["include/*.h"]},
+    package_data={"cronet": ["build/*.so"]},
     include_package_data=True,
     ext_modules=[
         Extension(
@@ -12,7 +12,7 @@ setup(
             include_dirs=include_dirs,
             library_dirs=lib_dirs,
             runtime_library_dirs=lib_dirs,
-            libraries=["cronet.122.0.6261.90"],
+            libraries=["cronet.122.0.6261.111"],
             extra_compile_args=[],
             sources=["src/cronet/_cronet.c"],
         ),

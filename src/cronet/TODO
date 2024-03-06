@@ -1,7 +1,3 @@
-- Apply proxy patch on cronet build
-- 
-- Async support
-- Canceling of requests
+- Apply proxy patch on cronet build 
 - Proxy support
-- Raise errors as exceptions
 - Automate build

@@ -1,53 +1,13 @@
-name: Build cronet
-run-name: Build cronet
-on:
-  workflow_dispatch:
+name: Build Linux
+run-name: Build Linux
+on: ["push"]
 jobs:
-  Build-Cronet:
+  Build-Linux:
     runs-on: ubuntu-latest
     steps:
-      - name: Maximize build space
-        uses: easimon/maximize-build-space@master
-        with:
-          root-reserve-mb: 512
-          swap-size-mb: 1024
-          remove-dotnet: 'true'
-      - run: rm -rf /opt/hostedtoolcache
-      - name: Free space
-        run: |
-          echo "Free space:"
-          df -h
-      - run: git clone --depth 1 https://chromium.googlesource.com/chromium/tools/depot_tools.git
-      - run: echo PATH="$(pwd)/depot_tools:$PATH" >> $GITHUB_ENV
-      - run: mkdir chromium
-      - run: git clone -b 122.0.6261.90 --depth=2 https://chromium.googlesource.com/chromium/src
-        working-directory: ./chromium
-      - name: Write .gclient file
-        run: |
-          echo 'solutions = [
-            {
-              "name": "src",
-              "url": "https://chromium.googlesource.com/chromium/src.git",
-              "managed": False,
-              "custom_deps": {},
-              "custom_vars": {},
-            },
-          ]' > .gclient
-        working-directory: ./chromium
-      - run: gclient sync --no-history --nohooks
-        working-directory: ./chromium
-      - run: ./build/install-build-deps.sh
-        working-directory: ./chromium/src/
-      - run: gclient runhooks
-        working-directory: ./chromium
-      - run: gn gen out/Cronet
-        working-directory: ./chromium/src/components/cronet
-      - run: ninja -C out/Cronet cronet_package
-        working-directory: ./chromium/src/components/cronet
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: cronet
-          path: |
-            ./chromium/src/components/cronet/out/Cronet/*.so
-            ./chromium/src/components/cronet/out/Cronet/cronet/include/
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Download libcronet
+        run: ./libcronet.sh
+      - name: Build
+        run: python3 -m build
