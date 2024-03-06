@@ -9,5 +9,8 @@ jobs:
         uses: actions/checkout@v4
       - name: Download libcronet
         run: ./libcronet.sh
+      - name: Create virtualenv
+        run: virtualenv -p python3 venv
       - name: Build
-        run: python3 -m build
+        run: ./venv/bin/pip install build && ./venv/bin/python -m build
+
