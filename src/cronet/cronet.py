@@ -1,8 +1,9 @@
 from dataclasses import dataclass
 from functools import cached_property
-from typing import Optional
+from typing import Optional, Union
 from . import _cronet
-import threading
+import asyncio
+import concurrent.futures
 
 
 
@@ -14,14 +15,30 @@ class CronetException(Exception):
 class Request:
     url: str
     method: str
-    content: bytes
     headers: dict[str, str]
+    content: bytes
+    
 
-    def __post_init__(self):
+@dataclass
+class Response:
+    status_code: int
+    headers: dict[str, str]
+    url: str
+    content: Optional[bytes]
+
+    @cached_property
+    def text(self):
+        return self.content.decode("utf8")
+
+
+class RequestCallback:
+    def __init__(self, 
+                request: Request, 
+                future: Union[asyncio.Future, concurrent.futures.Future]):
         self._response = None
         self._response_content = bytearray()
-        self._done = threading.Event()
-        self._exc = None
+        self._future = future
+        self.request = request
 
     def on_redirect_received(self, location: str):
         pass
@@ -36,36 +53,17 @@ class Request:
 
     def on_succeeded(self):
         self._response.content = bytes(self._response_content)
-        self._done.set()
+        self._future.set_result(self._response)
 
     def on_failed(self, error: str):
-        self._exc = CronetException(error)
-        self._done.set()
+        self._future.set_exception(CronetException(error))
 
     def on_canceled(self):
-        self._done.set()
-
-    def wait_until_done(self, timeout: Optional[float] = None):
-        if not self._done.wait(timeout=timeout):
-            raise TimeoutError()
-        if self._exc:
-            raise self._exc
+        self._future.set_result(None)
 
     @property
     def response(self):
         return self._response
-
-
-@dataclass
-class Response:
-    status_code: int
-    headers: dict[str, str]
-    url: str
-    content: Optional[bytes]
-
-    @cached_property
-    def text(self):
-        return self.content.decode("utf8")
 
 
 class Cronet:
@@ -97,17 +95,16 @@ class Cronet:
         timeout: Optional[float] = None
     ):
         req = Request(url=url, method=method, content=content, headers=headers)
-        cronet_req = self._engine.request(req)
+        request_future = concurrent.futures.Future()
+        callback = RequestCallback(req, request_future)
+        cronet_req = self._engine.request(callback)
         try:
-            req.wait_until_done(timeout=timeout)
+            return request_future.result(timeout=timeout)
         except TimeoutError:
             self._engine.cancel(cronet_req)
-            req.wait_until_done()
             raise
         except CronetException:
             raise
-
-        return req.response
 
 
 if __name__ == "__main__":
