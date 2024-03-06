@@ -4,7 +4,7 @@ lib_dirs = ["src/cronet/build"]
 include_dirs = ["src/cronet/build/include"]
 
 setup(
-    package_data={"cronet": ["build/*.so"]},
+    package_data={"cronet": ["build/*.so", "build/include/*.h"]},
     include_package_data=True,
     ext_modules=[
         Extension(
