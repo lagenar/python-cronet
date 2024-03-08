@@ -9,7 +9,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build
-        run: docker run -it -e PLAT=manylinux_2_28_x86_64 -e CHROMIUM=122.0.6261.111 -e VERSION=0.0.1 -v `pwd`:/app quay.io/pypa/manylinux_2_28_x86_64 /app/libcronet/build.sh
+        run: docker run -t -e PLAT=manylinux_2_28_x86_64 -e CHROMIUM=122.0.6261.111 -e VERSION=0.0.1 -v `pwd`:/app quay.io/pypa/manylinux_2_28_x86_64 /app/libcronet/build.sh
       - uses: actions/upload-artifact@v4
         with:
           name: wheels
