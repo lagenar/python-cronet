@@ -1,0 +1,283 @@
+diff --git a/components/cronet/cronet_context.cc b/components/cronet/cronet_context.cc
+index 4f0ebd8125..149466a56f 100644
+--- a/components/cronet/cronet_context.cc
++++ b/components/cronet/cronet_context.cc
+@@ -63,6 +63,9 @@
+ #include "net/url_request/url_request_context_builder.h"
+ #include "net/url_request/url_request_context_getter.h"
+ #include "net/url_request/url_request_interceptor.h"
++#include "net/proxy_resolution/proxy_config_service.h"
++#include "net/proxy_resolution/proxy_config.h"
++
+ 
+ #if BUILDFLAG(ENABLE_REPORTING)
+ #include "net/network_error_logging/network_error_logging_service.h"
+@@ -204,6 +207,7 @@ CronetContext::CronetContext(
+       default_load_flags_(
+           net::LOAD_NORMAL |
+           (context_config->load_disable_cache ? net::LOAD_DISABLE_CACHE : 0)),
++      proxy_rules_(context_config->proxy_rules),
+       network_tasks_(
+           new NetworkTasks(std::move(context_config), std::move(callback))),
+       network_task_runner_(network_task_runner) {
+@@ -249,12 +253,41 @@ CronetContext::NetworkTasks::~NetworkTasks() {
+     net::NetworkChangeNotifier::RemoveNetworkObserver(this);
+ }
+ 
++
++class ProxyConfigServiceCustom : public net::ProxyConfigService {
++ public:
++  ProxyConfigServiceCustom(const std::string& proxy_rules):proxy_rules_(proxy_rules) {}
++  void AddObserver(Observer* observer) override {}
++  void RemoveObserver(Observer* observer) override {}
++  ConfigAvailability GetLatestProxyConfig(
++      net::ProxyConfigWithAnnotation* config) override {
++
++    auto proxy_config = net::ProxyConfig();
++    proxy_config.proxy_rules().ParseFromString(proxy_rules_);
++    auto annotation = net::DefineNetworkTrafficAnnotation("test", "test");
++    *config = net::ProxyConfigWithAnnotation(proxy_config, annotation);
++    return CONFIG_VALID;
++  }
++
++  private:
++    const std::string proxy_rules_;
++};
++
++
+ void CronetContext::InitRequestContextOnInitThread() {
+   DCHECK(OnInitThread());
+   // Cannot create this inside Initialize because Android requires this to be
+   // created on the JNI thread.
+-  auto proxy_config_service =
++
++  std::unique_ptr<net::ProxyConfigService> proxy_config_service;
++  if (!proxy_rules_.empty()) {
++    proxy_config_service =
++      std::make_unique<ProxyConfigServiceCustom>(proxy_rules_);
++  } else {
++    proxy_config_service =
+       cronet::CreateProxyConfigService(GetNetworkTaskRunner());
++  }
++
+   g_net_log.Get().EnsureInitializedOnInitThread();
+   GetNetworkTaskRunner()->PostTask(
+       FROM_HERE,
+diff --git a/components/cronet/cronet_context.h b/components/cronet/cronet_context.h
+index b5163c84b0..a19b25964f 100644
+--- a/components/cronet/cronet_context.h
++++ b/components/cronet/cronet_context.h
+@@ -379,6 +379,8 @@ class CronetContext {
+   // File thread should be destroyed last.
+   std::unique_ptr<base::Thread> file_thread_;
+ 
++  const std::string proxy_rules_;
++
+   // |network_tasks_| is owned by |this|. It is created off the network thread,
+   // but invoked and destroyed on network thread.
+   raw_ptr<NetworkTasks, AcrossTasksDanglingUntriaged> network_tasks_;
+diff --git a/components/cronet/cronet_global_state_stubs.cc b/components/cronet/cronet_global_state_stubs.cc
+index e1162a786c..d508cb6cc4 100644
+--- a/components/cronet/cronet_global_state_stubs.cc
++++ b/components/cronet/cronet_global_state_stubs.cc
+@@ -13,7 +13,6 @@
+ #include "base/task/thread_pool.h"
+ #include "base/task/thread_pool/thread_pool_instance.h"
+ #include "net/proxy_resolution/configured_proxy_resolution_service.h"
+-#include "net/proxy_resolution/proxy_config_service.h"
+ 
+ // This file provides minimal "stub" implementations of the Cronet global-state
+ // functions for the native library build, sufficient to have cronet_tests and
+diff --git a/components/cronet/native/cronet.idl b/components/cronet/native/cronet.idl
+index 8e83cb0cf7..3be2a64b8e 100644
+--- a/components/cronet/native/cronet.idl
++++ b/components/cronet/native/cronet.idl
+@@ -511,6 +511,8 @@ struct EngineParams {
+    */
+   string user_agent;
+ 
++  string proxy_rules;
++
+   /**
+    * Sets a default value for the Accept-Language header value for UrlRequests
+    * created by this engine. Explicitly setting the Accept-Language header
+diff --git a/components/cronet/native/engine.cc b/components/cronet/native/engine.cc
+index c35c4dbfc3..91afa00273 100644
+--- a/components/cronet/native/engine.cc
++++ b/components/cronet/native/engine.cc
+@@ -152,6 +152,7 @@ Cronet_RESULT Cronet_EngineImpl::StartWithParams(
+   context_config_builder.experimental_options = params->experimental_options;
+   context_config_builder.bypass_public_key_pinning_for_local_trust_anchors =
+       params->enable_public_key_pinning_bypass_for_local_trust_anchors;
++  context_config_builder.proxy_rules = params->proxy_rules;
+   if (!isnan(params->network_thread_priority)) {
+     context_config_builder.network_thread_priority =
+         params->network_thread_priority;
+diff --git a/components/cronet/native/generated/cronet.idl_c.h b/components/cronet/native/generated/cronet.idl_c.h
+index 988e6efacb..a3fd529fcf 100644
+--- a/components/cronet/native/generated/cronet.idl_c.h
++++ b/components/cronet/native/generated/cronet.idl_c.h
+@@ -794,6 +794,11 @@ void Cronet_EngineParams_enable_check_result_set(
+ CRONET_EXPORT
+ void Cronet_EngineParams_user_agent_set(Cronet_EngineParamsPtr self,
+                                         const Cronet_String user_agent);
++                                        CRONET_EXPORT
++CRONET_EXPORT
++void Cronet_EngineParams_proxy_rules_set(Cronet_EngineParamsPtr self,
++                                         const Cronet_String proxy_rules);
++
+ CRONET_EXPORT
+ void Cronet_EngineParams_accept_language_set(
+     Cronet_EngineParamsPtr self,
+@@ -845,6 +850,9 @@ CRONET_EXPORT
+ Cronet_String Cronet_EngineParams_user_agent_get(
+     const Cronet_EngineParamsPtr self);
+ CRONET_EXPORT
++Cronet_String Cronet_EngineParams_proxy_rules_get(
++    const Cronet_EngineParamsPtr self);
++CRONET_EXPORT
+ Cronet_String Cronet_EngineParams_accept_language_get(
+     const Cronet_EngineParamsPtr self);
+ CRONET_EXPORT
+diff --git a/components/cronet/native/generated/cronet.idl_impl_struct.cc b/components/cronet/native/generated/cronet.idl_impl_struct.cc
+index b9120ff8c2..e62eac2e7f 100644
+--- a/components/cronet/native/generated/cronet.idl_impl_struct.cc
++++ b/components/cronet/native/generated/cronet.idl_impl_struct.cc
+@@ -249,6 +249,12 @@ void Cronet_EngineParams_user_agent_set(Cronet_EngineParamsPtr self,
+   self->user_agent = user_agent;
+ }
+ 
++void Cronet_EngineParams_proxy_rules_set(Cronet_EngineParamsPtr self,
++                                         const Cronet_String proxy_rules) {
++  DCHECK(self);
++  self->proxy_rules = proxy_rules;
++}
++
+ void Cronet_EngineParams_accept_language_set(
+     Cronet_EngineParamsPtr self,
+     const Cronet_String accept_language) {
+@@ -342,6 +348,12 @@ Cronet_String Cronet_EngineParams_user_agent_get(
+   return self->user_agent.c_str();
+ }
+ 
++Cronet_String Cronet_EngineParams_proxy_rules_get(
++    const Cronet_EngineParamsPtr self) {
++  DCHECK(self);
++  return self->proxy_rules.c_str();
++}
++
+ Cronet_String Cronet_EngineParams_accept_language_get(
+     const Cronet_EngineParamsPtr self) {
+   DCHECK(self);
+diff --git a/components/cronet/native/generated/cronet.idl_impl_struct.h b/components/cronet/native/generated/cronet.idl_impl_struct.h
+index badb341ce3..cef7ccb4a9 100644
+--- a/components/cronet/native/generated/cronet.idl_impl_struct.h
++++ b/components/cronet/native/generated/cronet.idl_impl_struct.h
+@@ -82,6 +82,7 @@ struct Cronet_EngineParams {
+ 
+   bool enable_check_result = true;
+   std::string user_agent;
++  std::string proxy_rules;
+   std::string accept_language;
+   std::string storage_path;
+   bool enable_quic = true;
+diff --git a/components/cronet/native/sample/main.cc b/components/cronet/native/sample/main.cc
+index 0cbbdce569..9f470480eb 100644
+--- a/components/cronet/native/sample/main.cc
++++ b/components/cronet/native/sample/main.cc
+@@ -13,6 +13,7 @@ Cronet_EnginePtr CreateCronetEngine() {
+   Cronet_EngineParamsPtr engine_params = Cronet_EngineParams_Create();
+   Cronet_EngineParams_user_agent_set(engine_params, "CronetSample/1");
+   Cronet_EngineParams_enable_quic_set(engine_params, true);
++  Cronet_EngineParams_proxy_rules_set(engine_params, "socks5://localhost:9050");
+ 
+   Cronet_Engine_StartWithParams(cronet_engine, engine_params);
+   Cronet_EngineParams_Destroy(engine_params);
+diff --git a/components/cronet/url_request_context_config.cc b/components/cronet/url_request_context_config.cc
+index f96c5dadbe..85f81e08e1 100644
+--- a/components/cronet/url_request_context_config.cc
++++ b/components/cronet/url_request_context_config.cc
+@@ -265,6 +265,7 @@ URLRequestContextConfig::URLRequestContextConfig(
+     const std::string& storage_path,
+     const std::string& accept_language,
+     const std::string& user_agent,
++    const std::string& proxy_rules,
+     base::Value::Dict experimental_options,
+     std::unique_ptr<net::CertVerifier> mock_cert_verifier,
+     bool enable_network_quality_estimator,
+@@ -279,6 +280,7 @@ URLRequestContextConfig::URLRequestContextConfig(
+       storage_path(storage_path),
+       accept_language(accept_language),
+       user_agent(user_agent),
++      proxy_rules(proxy_rules),
+       mock_cert_verifier(std::move(mock_cert_verifier)),
+       enable_network_quality_estimator(enable_network_quality_estimator),
+       bypass_public_key_pinning_for_local_trust_anchors(
+@@ -305,6 +307,7 @@ URLRequestContextConfig::CreateURLRequestContextConfig(
+     const std::string& storage_path,
+     const std::string& accept_language,
+     const std::string& user_agent,
++    const std::string& proxy_rules,
+     const std::string& unparsed_experimental_options,
+     std::unique_ptr<net::CertVerifier> mock_cert_verifier,
+     bool enable_network_quality_estimator,
+@@ -322,7 +325,7 @@ URLRequestContextConfig::CreateURLRequestContextConfig(
+   }
+   return base::WrapUnique(new URLRequestContextConfig(
+       enable_quic, enable_spdy, enable_brotli, http_cache, http_cache_max_size,
+-      load_disable_cache, storage_path, accept_language, user_agent,
++      load_disable_cache, storage_path, accept_language, user_agent, proxy_rules,
+       std::move(experimental_options).value(), std::move(mock_cert_verifier),
+       enable_network_quality_estimator,
+       bypass_public_key_pinning_for_local_trust_anchors,
+@@ -829,7 +832,7 @@ std::unique_ptr<URLRequestContextConfig>
+ URLRequestContextConfigBuilder::Build() {
+   return URLRequestContextConfig::CreateURLRequestContextConfig(
+       enable_quic, enable_spdy, enable_brotli, http_cache, http_cache_max_size,
+-      load_disable_cache, storage_path, accept_language, user_agent,
++      load_disable_cache, storage_path, accept_language, user_agent, proxy_rules,
+       experimental_options, std::move(mock_cert_verifier),
+       enable_network_quality_estimator,
+       bypass_public_key_pinning_for_local_trust_anchors,
+diff --git a/components/cronet/url_request_context_config.h b/components/cronet/url_request_context_config.h
+index 8e8e044739..87ceb278fe 100644
+--- a/components/cronet/url_request_context_config.h
++++ b/components/cronet/url_request_context_config.h
+@@ -127,6 +127,8 @@ struct URLRequestContextConfig {
+   // User-Agent request header field.
+   const std::string user_agent;
+ 
++  const std::string proxy_rules;
++
+   // Certificate verifier for testing.
+   std::unique_ptr<net::CertVerifier> mock_cert_verifier;
+ 
+@@ -199,6 +201,9 @@ struct URLRequestContextConfig {
+       const std::string& accept_language,
+       // User-Agent request header field.
+       const std::string& user_agent,
++
++      const std::string& proxy_rules,
++
+       // JSON encoded experimental options.
+       const std::string& unparsed_experimental_options,
+       // MockCertVerifier to use for testing purposes.
+@@ -233,6 +238,9 @@ struct URLRequestContextConfig {
+       const std::string& accept_language,
+       // User-Agent request header field.
+       const std::string& user_agent,
++
++      const std::string& proxy_rules,
++
+       // Parsed experimental options.
+       base::Value::Dict experimental_options,
+       // MockCertVerifier to use for testing purposes.
+@@ -301,6 +309,8 @@ struct URLRequestContextConfigBuilder {
+   std::string accept_language = "";
+   // User-Agent request header field.
+   std::string user_agent = "";
++
++  std::string proxy_rules = "";
+   // Experimental options encoded as a string in a JSON format containing
+   // experiments and their corresponding configuration options. The format
+   // is a JSON object with the name of the experiment as the key, and the
