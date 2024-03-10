@@ -57,10 +57,10 @@ python3.9 -m build
 auditwheel repair --plat manylinux_2_28_x86_64 dist/cronet-$VERSION-cp39-cp39-linux_x86_64.whl
 
 python3.10 -m build
-auditwheel repair --plat manylinux_2_28_x86_64 dist/cronet-$VERSION-cp10-cp10-linux_x86_64.whl
+auditwheel repair --plat manylinux_2_28_x86_64 dist/cronet-$VERSION-cp310-cp310-linux_x86_64.whl
 
 python3.11 -m build
-auditwheel repair --plat manylinux_2_28_x86_64 dist/cronet-$VERSION-cp11-cp11-linux_x86_64.whl
+auditwheel repair --plat manylinux_2_28_x86_64 dist/cronet-$VERSION-cp311-cp311-linux_x86_64.whl
 
 python3.12 -m build
-auditwheel repair --plat manylinux_2_28_x86_64 dist/cronet-$VERSION-cp12-cp12-linux_x86_64.whl
+auditwheel repair --plat manylinux_2_28_x86_64 dist/cronet-$VERSION-cp312-cp312-linux_x86_64.whl
