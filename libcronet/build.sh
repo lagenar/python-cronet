@@ -12,7 +12,7 @@ export PATH="$(pwd)/depot_tools:$PATH"
 git clone -b $CHROMIUM --depth=2 https://chromium.googlesource.com/chromium/src
 
 cd src
-git apply /app/chromium/proxy_support_*.patch
+git apply /app/libcronet/proxy_support_*.patch
 cd ..
 echo 'solutions = [
       {
