@@ -26,7 +26,7 @@ pythonpath = [
 ]
 
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ["."]
 
 [project.urls]
 Homepage = "https://github.com/lagenar/python-cronet"
