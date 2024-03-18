@@ -1,6 +1,6 @@
 from setuptools import Extension, setup
 
-include_dirs = ["src/cronet/build/include"]
+include_dirs = ["src/build/include"]
 
 setup(
     package_data={"cronet": ["build/include/*.h"]},
@@ -10,7 +10,7 @@ setup(
             name="cronet._cronet",
             include_dirs=include_dirs,
             libraries=["cronet.122.0.6261.111"],
-            sources=["src/cronet/_cronet.c"],
+            sources=["src/_cronet.c"],
         ),
     ],
 )
