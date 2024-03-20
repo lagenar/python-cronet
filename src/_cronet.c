@@ -1,6 +1,7 @@
 #define PY_SSIZE_T_CLEAN
 #include <pthread.h>
 #include <stdbool.h>
+#include <time.h>
 
 #include "Python.h"
 #include "cronet_c.h"
@@ -22,7 +23,6 @@ typedef struct {
   Cronet_RunnablePtr runnable;
   pthread_mutex_t runnable_mutex;
   pthread_cond_t cond;
-  pthread_mutex_t cond_mutex;
   volatile bool should_stop;
 } ExecutorContext;
 
@@ -69,9 +69,12 @@ void execute_runnable(Cronet_ExecutorPtr executor,
 void *process_requests(void *executor_context) {
   ExecutorContext *ctx = (ExecutorContext *)executor_context;
   while (!ctx->should_stop) {
-    pthread_cond_wait(&ctx->cond, &ctx->cond_mutex);
+    struct timespec ts;
+    ts.tv_sec = 0;
+    ts.tv_nsec = 1000;
     pthread_mutex_lock(&ctx->runnable_mutex);
-    if (ctx->runnable != NULL) {
+    int res = pthread_cond_timedwait(&ctx->cond, &ctx->runnable_mutex, &ts);
+    if (res == 0 && ctx->runnable != NULL) {
       Cronet_Runnable_Run(ctx->runnable);
       Cronet_Runnable_Destroy(ctx->runnable);
       ctx->runnable = NULL;
@@ -228,6 +231,7 @@ typedef struct {
 
 static void CronetEngine_dealloc(CronetEngineObject *self) {
   self->executor_context.should_stop = true;
+  pthread_cond_signal(&self->executor_context.cond);
   pthread_join(self->executor_thread, NULL);
   Cronet_Executor_Destroy(self->executor);
   Cronet_Engine_Shutdown(self->engine);
@@ -264,7 +268,6 @@ static int CronetEngine_init(CronetEngineObject *self, PyObject *args, PyObject 
   self->executor_context = (ExecutorContext){
       .runnable = NULL,
       .cond = PTHREAD_COND_INITIALIZER,
-      .cond_mutex = PTHREAD_MUTEX_INITIALIZER,
       .runnable_mutex = PTHREAD_MUTEX_INITIALIZER,
       .should_stop = false,
   };
@@ -276,6 +279,7 @@ static int CronetEngine_init(CronetEngineObject *self, PyObject *args, PyObject 
     PyErr_SetString(PyExc_RuntimeError, "Could not start executor thread");
     goto fail;
   }
+  self->executor_thread = executor_t;
   LOG("Started cronet engine");
   return 0;
 
