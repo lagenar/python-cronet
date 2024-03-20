@@ -47,8 +47,10 @@ ninja -C out/Cronet cronet_package
 
 cp out/Cronet/cronet/libcronet*so /lib64
 cp out/Cronet/cronet/include/*.h /usr/local/include
+rm -rf out
 
 cd /app
+
 
 python3.8 -m build
 auditwheel repair --plat manylinux_2_28_x86_64 dist/cronet-$VERSION-cp38-cp38-linux_x86_64.whl
