@@ -1,13 +1,18 @@
+import asyncio
+import concurrent.futures
 from dataclasses import dataclass
 from functools import cached_property
 from typing import Any, Optional, Union
-from . import _cronet
-import asyncio
-import concurrent.futures
+from urllib.parse import ParseResult, parse_qs, urlencode, urlparse
+
+import _cronet
 
 
 class CronetException(Exception):
     pass
+
+
+URLParams = Union[str, dict[str, Any], tuple[str, Any]]
 
 
 @dataclass
@@ -16,6 +21,44 @@ class Request:
     method: str
     headers: dict[str, str]
     content: bytes
+
+    def add_url_params(self, params: URLParams) -> None:
+        if not params:
+            return
+
+        request_params = {}
+        if isinstance(params, str):
+            request_params = parse_qs(params)
+        else:
+            items = tuple()
+            if isinstance(params, dict):
+                items = params.items()
+            elif isinstance(params, tuple):
+                items = params
+            else:
+                raise TypeError("Received object of invalid type for `params`")
+            for k, v in items:
+                request_params.setdefault(k, [])
+                request_params[k].append(str(v))
+
+        parsed_url = urlparse(self.url)
+        if request_params:
+            query = parsed_url.query
+            url_params = parse_qs(query)
+            for k, v in url_params.items():
+                request_params.setdefault(k, [])
+                request_params[k].extend(v)
+
+            parsed_url = ParseResult(
+                scheme=parsed_url.scheme,
+                netloc=parsed_url.netloc,
+                path=parsed_url.path,
+                params=parsed_url.params,
+                query=urlencode(request_params, doseq=True),
+                fragment=parsed_url.fragment,
+            )
+
+        self.url = parsed_url.geturl()
 
 
 @dataclass
@@ -68,7 +111,7 @@ class RequestCallback:
 
     def on_succeeded(self):
         self._response.content = bytes(self._response_content)
-        self._set_result(self._response_content)
+        self._set_result(self._response)
 
     def on_failed(self, error: str):
         self._set_exception(CronetException(error))
@@ -77,7 +120,7 @@ class RequestCallback:
         self._set_result(None)
 
 
-class BaseCronetEngine:
+class BaseCronet:
     def __init__(self):
         self._engine = None
 
@@ -97,17 +140,20 @@ class BaseCronetEngine:
             del self._engine
 
 
-class CronetEngine(BaseCronetEngine):
+class Cronet(BaseCronet):
     def request(
         self,
+        method: str,
         url: str,
         *,
-        method: str = "GET",
-        content: Optional[bytes] = None,
+        params: Optional[URLParams] = None,
+        body: Optional[bytes] = None,
         headers: Optional[dict[str, str]] = None,
-        timeout: float = 10.0
+        timeout: float = 10.0,
     ) -> Response:
-        req = Request(url=url, method=method, content=content, headers=headers)
+        req = Request(method=method, url=url, content=body, headers=headers)
+        if params:
+            req.add_url_params(params)
         request_future = concurrent.futures.Future()
         callback = RequestCallback(req, request_future)
         cronet_req = self._engine.request(callback)
@@ -120,17 +166,20 @@ class CronetEngine(BaseCronetEngine):
             raise
 
 
-class AsyncCronetEngine(BaseCronetEngine):
+class AsyncCronet(BaseCronet):
     async def request(
         self,
+        method: str,
         url: str,
         *,
-        method: str = "GET",
-        content: Optional[bytes] = None,
+        params: Optional[URLParams] = None,
+        body: Optional[bytes] = None,
         headers: Optional[dict[str, str]] = None,
-        timeout: float = 10.0
+        timeout: float = 10.0,
     ) -> Response:
-        req = Request(url=url, method=method, content=content, headers=headers)
+        req = Request(method=method, url=url, content=body, headers=headers)
+        if params:
+            req.add_url_params(params)
         request_future = asyncio.Future()
         callback = RequestCallback(req, request_future)
         cronet_req = self._engine.request(callback)
