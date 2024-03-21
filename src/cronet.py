@@ -1,5 +1,6 @@
 import asyncio
 import concurrent.futures
+import json
 from dataclasses import dataclass
 from functools import cached_property
 from typing import Any, Optional, Union
@@ -71,6 +72,9 @@ class Response:
     @cached_property
     def text(self):
         return self.content.decode("utf8")
+
+    def json(self) -> Any:
+        return json.loads(self.text)
 
 
 class RequestCallback:
