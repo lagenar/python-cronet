@@ -58,7 +58,9 @@ void execute_runnable(Cronet_ExecutorPtr executor,
       run->runnable = runnable;
       updated = true;
     }
-    pthread_cond_signal(&run->cond);
+    if (updated) {
+      pthread_cond_signal(&run->cond);
+    }
     pthread_mutex_unlock(&run->runnable_mutex);
   }
 }
@@ -69,11 +71,8 @@ void execute_runnable(Cronet_ExecutorPtr executor,
 void *process_requests(void *executor_context) {
   ExecutorContext *ctx = (ExecutorContext *)executor_context;
   while (!ctx->should_stop) {
-    struct timespec ts;
-    ts.tv_sec = 0;
-    ts.tv_nsec = 1000;
     pthread_mutex_lock(&ctx->runnable_mutex);
-    int res = pthread_cond_timedwait(&ctx->cond, &ctx->runnable_mutex, &ts);
+    int res = pthread_cond_wait(&ctx->cond, &ctx->runnable_mutex);
     if (res == 0 && ctx->runnable != NULL) {
       Cronet_Runnable_Run(ctx->runnable);
       Cronet_Runnable_Destroy(ctx->runnable);
@@ -413,7 +412,6 @@ static PyObject *CronetEngine_request(CronetEngineObject *self, PyObject *args) 
     return NULL;
   }
   Cronet_UrlRequest_Start(request);
-  LOG("Scheduled request");
   return capsule;
 }
 
