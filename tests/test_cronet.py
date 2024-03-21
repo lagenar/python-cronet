@@ -1,15 +1,26 @@
-import pytest
-from cronet import Cronet
 import json
 
+import pytest
+from cronet import Cronet
 
-#@pytest.mark.asyncio
-def test_get(aiohttp_server):
-    cr = Cronet()
-    cr.start()
-    response = cr.request("GET", "http://127.0.0.1:8080")
+BASE_URL = "http://127.0.0.1:8080"
+
+
+# @pytest.mark.asyncio
+def test_status_code(aiohttp_server, cronet_client):
+    response = cronet_client.request("GET", f"{BASE_URL}/status_code/200")
     assert response.status_code == 200
-    data = json.loads(response.content)
-    cr.stop()
+    response = cronet_client.request("GET", f"{BASE_URL}/status_code/404")
+    assert response.status_code == 404
 
 
+def test_send_headers(aiohttp_server):
+    pass
+
+
+def test_send_params(aiohttp_server):
+    pass
+
+
+def test_send_body(aiohttp_server):
+    pass

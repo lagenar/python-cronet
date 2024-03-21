@@ -1,10 +1,11 @@
-import os
-import sys
-import pytest
-import subprocess
-import time
 import http.client
+import os
+import subprocess
+import sys
+import time
 
+import cronet
+import pytest
 
 
 def wait_server_ready():
@@ -14,7 +15,7 @@ def wait_server_ready():
             conn = http.client.HTTPConnection("127.0.0.1", 8080)
             conn.request("GET", "/")
         except Exception:
-            attempts -=1
+            attempts -= 1
             if not attempts:
                 raise
             else:
@@ -26,8 +27,14 @@ def wait_server_ready():
 
 @pytest.fixture(scope="session")
 def aiohttp_server():
-    process = subprocess.Popen((sys.executable, 'tests/server.py'))
+    process = subprocess.Popen((sys.executable, "tests/server.py"))
     wait_server_ready()
     yield
     process.terminate()
     process.wait()
+
+
+@pytest.fixture()
+def cronet_client():
+    with cronet.Cronet() as cr:
+        yield cr
