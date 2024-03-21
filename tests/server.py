@@ -6,7 +6,7 @@ async def status_code(request):
 
 
 async def headers(request):
-    return web.json_response(request.headers)
+    return web.json_response(dict(request.headers))
 
 
 app = web.Application()
