@@ -1,9 +1,6 @@
 import base64
 import json
 
-import pytest
-from cronet import Cronet
-
 BASE_URL = "http://127.0.0.1:8080"
 
 
