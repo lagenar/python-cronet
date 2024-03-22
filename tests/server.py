@@ -8,13 +8,14 @@ async def status_code(request: web.Request):
 
 
 async def echo(request: web.Request):
-    body = await request.read()
+    content = await request.read()
+    post_data = await request.post()
     data = {
         "headers": dict(request.headers),
         "url": str(request.rel_url),
         "method": request.method,
-        "body": base64.b64encode(body).decode("utf8"),
-        #'post_params': dict(request.post())
+        "base64_content": base64.b64encode(content).decode("utf8"),
+        "post_data": dict(post_data),
     }
     return web.json_response(data)
 
@@ -24,6 +25,7 @@ app.add_routes(
     [
         web.get(r"/status_code/{status_code:\d+}", status_code),
         web.get("/echo", echo),
+        web.post("/echo", echo),
     ]
 )
 

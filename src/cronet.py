@@ -61,6 +61,10 @@ class Request:
 
         self.url = parsed_url.geturl()
 
+    def set_form_data(self, data: dict[str, str]):
+        self.content = urlencode(data).encode("utf8")
+        self.headers["Content-Type"] = "application/x-www-form-urlencoded"
+
 
 @dataclass
 class Response:
@@ -151,13 +155,16 @@ class Cronet(BaseCronet):
         url: str,
         *,
         params: Optional[URLParams] = None,
-        body: Optional[bytes] = None,
+        data: Optional[dict[str, str]] = None,
+        content: Optional[bytes] = None,
         headers: Optional[dict[str, str]] = None,
         timeout: float = 10.0,
     ) -> Response:
-        req = Request(method=method, url=url, content=body, headers=headers)
+        req = Request(method=method, url=url, content=content, headers=headers or {})
         if params:
             req.add_url_params(params)
+        if data:
+            req.set_form_data(data)
         request_future = concurrent.futures.Future()
         callback = RequestCallback(req, request_future)
         cronet_req = self._engine.request(callback)
@@ -177,13 +184,16 @@ class AsyncCronet(BaseCronet):
         url: str,
         *,
         params: Optional[URLParams] = None,
-        body: Optional[bytes] = None,
+        data: Optional[dict[str, str]] = None,
+        content: Optional[bytes] = None,
         headers: Optional[dict[str, str]] = None,
         timeout: float = 10.0,
     ) -> Response:
-        req = Request(method=method, url=url, content=body, headers=headers)
+        req = Request(method=method, url=url, content=content, headers=headers or {})
         if params:
             req.add_url_params(params)
+        if data:
+            req.set_form_data(data)
         request_future = asyncio.Future()
         callback = RequestCallback(req, request_future)
         cronet_req = self._engine.request(callback)

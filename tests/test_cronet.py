@@ -33,8 +33,19 @@ def test_send_params(aiohttp_server, cronet_client):
     assert response.json()["url"] == "/echo?test1=1&test2=2"
 
 
-def test_send_body(aiohttp_server, cronet_client):
-    request_body = b"\xe8\xad\x89\xe6\x98\x8e" * 500
-    response = cronet_client.request("GET", f"{BASE_URL}/echo", body=request_body)
-    body = json.loads(response.text)["body"]
-    assert base64.b64decode(body) == request_body
+def test_send_content(aiohttp_server, cronet_client):
+    request_content = b"\xe8\xad\x89\xe6\x98\x8e" * 500
+    response = cronet_client.request("GET", f"{BASE_URL}/echo", content=request_content)
+    content = json.loads(response.text)["base64_content"]
+    assert base64.b64decode(content) == request_content
+
+
+def test_send_form_data(aiohttp_server, cronet_client):
+    data = {"email": "test@example.com", "password": "test"}
+    response = cronet_client.request("POST", f"{BASE_URL}/echo", data=data)
+    response_data = json.loads(response.text)
+    expected_data = {"email": "test@example.com", "password": "test"}
+    assert response_data["post_data"] == expected_data
+    assert (
+        response_data["headers"]["Content-Type"] == "application/x-www-form-urlencoded"
+    )
