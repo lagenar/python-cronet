@@ -47,9 +47,9 @@ ninja -C out/Cronet cronet_package
 
 cp out/Cronet/cronet/libcronet*so /lib64
 cp out/Cronet/cronet/include/*.h /usr/local/include
-rm -rf out
 
 cd /app
+rm -rf src
 
 
 python3.8 -m build
