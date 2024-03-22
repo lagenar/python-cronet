@@ -49,7 +49,7 @@ cp out/Cronet/cronet/libcronet*so /lib64
 cp out/Cronet/cronet/include/*.h /usr/local/include
 
 cd /app
-rm -rf src
+rm -rf out
 
 
 python3.8 -m build
