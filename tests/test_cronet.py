@@ -49,3 +49,18 @@ def test_send_form_data(aiohttp_server, cronet_client):
     assert (
         response_data["headers"]["Content-Type"] == "application/x-www-form-urlencoded"
     )
+
+
+def test_redirect(aiohttp_server, cronet_client):
+    response = cronet_client.request(
+        "GET", f"{BASE_URL}/redirect", allow_redirects=True
+    )
+    assert response.url == f"{BASE_URL}/echo"
+    assert response.status_code == 200
+
+    response = cronet_client.request(
+        "GET", f"{BASE_URL}/redirect", allow_redirects=False
+    )
+    assert response.status_code == 301
+    assert response.url == f"{BASE_URL}/redirect"
+    assert response.headers["location"] == "/echo"

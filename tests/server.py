@@ -20,12 +20,17 @@ async def echo(request: web.Request):
     return web.json_response(data)
 
 
+async def redirect(request: web.Request):
+    return web.Response(status=301, headers={"location": "/echo"})
+
+
 app = web.Application()
 app.add_routes(
     [
         web.get(r"/status_code/{status_code:\d+}", status_code),
         web.get("/echo", echo),
         web.post("/echo", echo),
+        web.get("/redirect", redirect),
     ]
 )
 

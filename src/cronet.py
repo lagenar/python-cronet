@@ -22,6 +22,7 @@ class Request:
     method: str
     headers: dict[str, str]
     content: bytes
+    allow_redirects: bool = True
 
     def add_url_params(self, params: URLParams) -> None:
         if not params:
@@ -106,8 +107,14 @@ class RequestCallback:
                 self._future.set_exception, exc
             )
 
-    def on_redirect_received(self, location: str):
-        pass
+    def on_redirect_received(
+        self, url: str, new_location: str, status_code: int, headers: dict[str, str]
+    ):
+        self._response = Response(
+            url=url, status_code=status_code, headers=headers, content=b""
+        )
+        if not self.request.allow_redirects:
+            self._set_result(self._response)
 
     def on_response_started(self, url: str, status_code: int, headers: dict[str, str]):
         self._response = Response(
@@ -125,7 +132,7 @@ class RequestCallback:
         self._set_exception(CronetException(error))
 
     def on_canceled(self):
-        self._set_result(None)
+        self._set_result(self._response)
 
 
 class BaseCronet:
@@ -158,9 +165,16 @@ class Cronet(BaseCronet):
         data: Optional[dict[str, str]] = None,
         content: Optional[bytes] = None,
         headers: Optional[dict[str, str]] = None,
+        allow_redirects: bool = True,
         timeout: float = 10.0,
     ) -> Response:
-        req = Request(method=method, url=url, content=content, headers=headers or {})
+        req = Request(
+            method=method,
+            url=url,
+            content=content,
+            headers=headers or {},
+            allow_redirects=allow_redirects,
+        )
         if params:
             req.add_url_params(params)
         if data:
@@ -187,9 +201,16 @@ class AsyncCronet(BaseCronet):
         data: Optional[dict[str, str]] = None,
         content: Optional[bytes] = None,
         headers: Optional[dict[str, str]] = None,
+        allow_redirects: bool = True,
         timeout: float = 10.0,
     ) -> Response:
-        req = Request(method=method, url=url, content=content, headers=headers or {})
+        req = Request(
+            method=method,
+            url=url,
+            content=content,
+            headers=headers or {},
+            allow_redirects=allow_redirects,
+        )
         if params:
             req.add_url_params(params)
         if data:
