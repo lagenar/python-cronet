@@ -45,24 +45,7 @@ cd src/components/cronet
 gn gen out/Cronet/ --args='target_os="linux" is_debug=false is_component_build=false'
 ninja -C out/Cronet cronet_package
 
-cp out/Cronet/cronet/libcronet*so /lib64
-cp out/Cronet/cronet/include/*.h /usr/local/include
+cp -r out/Cronet/cronet/ /app/cronet_build
 
 cd /app
 rm -rf out
-
-
-python3.8 -m build
-auditwheel repair --plat manylinux_2_28_x86_64 dist/cronet-$VERSION-cp38-cp38-linux_x86_64.whl
-
-python3.9 -m build
-auditwheel repair --plat manylinux_2_28_x86_64 dist/cronet-$VERSION-cp39-cp39-linux_x86_64.whl
-
-python3.10 -m build
-auditwheel repair --plat manylinux_2_28_x86_64 dist/cronet-$VERSION-cp310-cp310-linux_x86_64.whl
-
-python3.11 -m build
-auditwheel repair --plat manylinux_2_28_x86_64 dist/cronet-$VERSION-cp311-cp311-linux_x86_64.whl
-
-python3.12 -m build
-auditwheel repair --plat manylinux_2_28_x86_64 dist/cronet-$VERSION-cp312-cp312-linux_x86_64.whl

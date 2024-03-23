@@ -15,8 +15,17 @@ jobs:
           remove-dotnet: 'true'
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Build wheels
+      - name: Cache Cronet
+        id: cache-cronet
+        uses: actions/cache@v4
+        with:
+          path: cronet_build
+          key: ${{ runner.os }}-cronet
+      - name: Build Cronet
+        if: steps.cache-cronet.outputs.cache-hit != 'true'
         run: docker run -t -e PLAT=manylinux_2_28_x86_64 -e CHROMIUM=123.0.6312.58 -e VERSION=0.0.1 -v `pwd`:/app quay.io/pypa/manylinux_2_28_x86_64 /app/libcronet/build.sh
+      - name: Build wheels
+        run: docker run -t -e PLAT=manylinux_2_28_x86_64 -e CHROMIUM=123.0.6312.58 -e VERSION=0.0.1 -v `pwd`:/app quay.io/pypa/manylinux_2_28_x86_64 /app/libcronet/build_wheels.sh
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
