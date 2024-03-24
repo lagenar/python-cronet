@@ -33,6 +33,12 @@ typedef struct {
 } RequestContext;
 
 
+typedef struct {
+  size_t upload_size;
+  size_t upload_bytes_read;
+  const char *content;
+} UploadProviderContext;
+
 void RequestContext_destroy(RequestContext* ctx)
 {
   if (ctx->callback) {
@@ -206,8 +212,9 @@ void on_canceled(Cronet_UrlRequestCallbackPtr callback,
 
 int64_t request_content_length(Cronet_UploadDataProviderPtr self)
 {
-    void *content = Cronet_UploadDataProvider_GetClientContext(self);
-    return strlen((const char*)content);
+    UploadProviderContext *ctx =
+      (UploadProviderContext *)Cronet_UploadDataProvider_GetClientContext(self);
+    return ctx->upload_size;
 }
 
 
@@ -216,13 +223,15 @@ void request_content_read(Cronet_UploadDataProviderPtr self,
                           Cronet_BufferPtr buffer)
 {
     size_t buffer_size = Cronet_Buffer_GetSize(buffer);
-    void *content = Cronet_UploadDataProvider_GetClientContext(self);
-    size_t content_size = strlen((const char*)content);
-    printf("Reading %ld to buffer of size %ld", content_size, buffer_size);
-    assert(buffer_size >= content_size);
+    UploadProviderContext *ctx =
+      (UploadProviderContext *)Cronet_UploadDataProvider_GetClientContext(self);
 
-    memcpy(Cronet_Buffer_GetData(buffer), content, content_size);
-    Cronet_UploadDataSink_OnReadSucceeded(upload_data_sink, content_size, false);
+    size_t offset = ctx->upload_bytes_read;
+    size_t rem = ctx->upload_size - ctx->upload_bytes_read;
+    size_t size = buffer_size >= rem ? rem : buffer_size;
+    memcpy(Cronet_Buffer_GetData(buffer), ctx->content + offset, size);
+    ctx->upload_bytes_read += size;
+    Cronet_UploadDataSink_OnReadSucceeded(upload_data_sink, size, false);
 }
 
 
@@ -234,6 +243,7 @@ void request_content_rewind(Cronet_UploadDataProviderPtr self,
 
 void request_content_close(Cronet_UploadDataProviderPtr self)
 {
+  free(Cronet_UploadDataProvider_GetClientContext(self));
 }
 
 
@@ -363,16 +373,6 @@ static PyObject *CronetEngine_request(CronetEngineObject *self, PyObject *args) 
   Cronet_UrlRequestParamsPtr request_params = Cronet_UrlRequestParams_Create();
   Cronet_UrlRequestParams_http_method_set(request_params, c_method);
 
-  if (c_content) {
-    Cronet_UploadDataProviderPtr data_provider =
-      Cronet_UploadDataProvider_CreateWith(&request_content_length,
-                                           &request_content_read,
-                                           &request_content_rewind,
-                                           &request_content_close);
-    Cronet_UploadDataProvider_SetClientContext(data_provider, c_content);
-    Cronet_UrlRequestParams_upload_data_provider_set(request_params, data_provider);
-  }
-
   if (!Py_IsNone(headers)) {
     PyObject *items = PyDict_Items(headers);
     if (!items) {
@@ -428,6 +428,25 @@ static PyObject *CronetEngine_request(CronetEngineObject *self, PyObject *args) 
   ctx->callback = NULL;
   ctx->allow_redirects = (bool)allow_redirects;
   ctx->py_callback = py_callback;
+  if (c_content) {
+    UploadProviderContext *upload_ctx =
+      (UploadProviderContext*)malloc(sizeof(UploadProviderContext));
+    if (!upload_ctx) {
+      abort();
+    }
+    upload_ctx->content = c_content;
+    upload_ctx->upload_size = strlen(c_content);
+    upload_ctx->upload_bytes_read = 0;
+    Cronet_UploadDataProviderPtr data_provider =
+      Cronet_UploadDataProvider_CreateWith(&request_content_length,
+                                           &request_content_read,
+                                           &request_content_rewind,
+                                           &request_content_close);
+
+    Cronet_UploadDataProvider_SetClientContext(data_provider, (void*)upload_ctx);
+    Cronet_UrlRequestParams_upload_data_provider_set(request_params, data_provider);
+  }
+
   Cronet_UrlRequest_SetClientContext(request, (void*)ctx);
   Cronet_UrlRequest_InitWithParams(request, self->engine, c_url, request_params,
                                    callback, self->executor);
