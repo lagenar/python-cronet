@@ -66,6 +66,10 @@ class Request:
         self.content = urlencode(data).encode("utf8")
         self.headers["Content-Type"] = "application/x-www-form-urlencoded"
 
+    def set_json_data(self, data: Any):
+        self.content = json.dumps(data).encode("utf8")
+        self.headers["Content-Type"] = "application/json"
+
 
 @dataclass
 class Response:
@@ -164,6 +168,7 @@ class Cronet(BaseCronet):
         params: Optional[URLParams] = None,
         data: Optional[dict[str, str]] = None,
         content: Optional[bytes] = None,
+        json: Optional[Any] = None,
         headers: Optional[dict[str, str]] = None,
         allow_redirects: bool = True,
         timeout: float = 10.0,
@@ -175,10 +180,15 @@ class Cronet(BaseCronet):
             headers=headers or {},
             allow_redirects=allow_redirects,
         )
+        if len([c_arg for c_arg in [data, content, json] if c_arg]) > 1:
+            raise ValueError("Only one of data, content and json can be provided")
+
         if params:
             req.add_url_params(params)
         if data:
             req.set_form_data(data)
+        elif json:
+            req.set_json_data(json)
         request_future = concurrent.futures.Future()
         callback = RequestCallback(req, request_future)
         cronet_req = self._engine.request(callback)
@@ -200,10 +210,14 @@ class AsyncCronet(BaseCronet):
         params: Optional[URLParams] = None,
         data: Optional[dict[str, str]] = None,
         content: Optional[bytes] = None,
+        json: Optional[Any] = None,
         headers: Optional[dict[str, str]] = None,
         allow_redirects: bool = True,
         timeout: float = 10.0,
     ) -> Response:
+        if len([c_arg for c_arg in [data, content, json] if c_arg]) > 1:
+            raise ValueError("Only one of `data`, `content` and `json` can be provided")
+
         req = Request(
             method=method,
             url=url,
@@ -215,6 +229,8 @@ class AsyncCronet(BaseCronet):
             req.add_url_params(params)
         if data:
             req.set_form_data(data)
+        elif json:
+            req.set_json_data(json)
         request_future = asyncio.Future()
         callback = RequestCallback(req, request_future)
         cronet_req = self._engine.request(callback)
