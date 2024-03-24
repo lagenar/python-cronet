@@ -218,6 +218,7 @@ void request_content_read(Cronet_UploadDataProviderPtr self,
     size_t buffer_size = Cronet_Buffer_GetSize(buffer);
     void *content = Cronet_UploadDataProvider_GetClientContext(self);
     size_t content_size = strlen((const char*)content);
+    printf("Reading %ld to buffer of size %ld", content_size, buffer_size);
     assert(buffer_size >= content_size);
 
     memcpy(Cronet_Buffer_GetData(buffer), content, content_size);

@@ -34,7 +34,7 @@ def test_send_params(aiohttp_server, cronet_client):
 
 
 def test_send_content(aiohttp_server, cronet_client):
-    request_content = b"\xe8\xad\x89\xe6\x98\x8e" * 500
+    request_content = b"\xe8\xad\x89\xe6\x98\x8e" * 3500
     response = cronet_client.request("GET", f"{BASE_URL}/echo", content=request_content)
     content = json.loads(response.text)["base64_content"]
     assert base64.b64decode(content) == request_content
