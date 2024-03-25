@@ -6,7 +6,7 @@ from functools import cached_property
 from typing import Any, Optional, Union
 from urllib.parse import ParseResult, parse_qs, urlencode, urlparse
 
-import _cronet
+from . import _cronet
 
 
 class CronetException(Exception):
