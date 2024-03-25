@@ -21,10 +21,10 @@ classifiers = [
 test = ["pytest", "aiohttp", "pytest-asyncio"]
 
 [tool.pytest.ini_options]
-pythonpath = ["src"]
+pythonpath = ["src/cronet"]
 
 [tool.setuptools.packages.find]
-where = ["."]
+where = ["src"]
 
 [project.urls]
 Homepage = "https://github.com/lagenar/python-cronet"
