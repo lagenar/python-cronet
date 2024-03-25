@@ -28,7 +28,7 @@ The library provides a synchronous and an asynchronous API:
 
 **For the time being the only supported platform is linux-x86-64. The plan is to also support windows and macOS.**
 
-`pip install cronet`
+`pip install python-cronet`
 
 ## Synchronous example
 ```!python
