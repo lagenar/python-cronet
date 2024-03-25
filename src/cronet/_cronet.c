@@ -278,7 +278,7 @@ static int CronetEngine_init(CronetEngineObject *self, PyObject *args, PyObject 
   Cronet_EngineParams_http_cache_mode_set(
       engine_params, Cronet_EngineParams_HTTP_CACHE_MODE_DISABLED);
   Cronet_EngineParams_enable_quic_set(engine_params, false);
-  Cronet_EngineParams_user_agent_set(engine_params, "cronet");
+  Cronet_EngineParams_user_agent_set(engine_params, "python-cronet");
   Cronet_RESULT res = Cronet_Engine_StartWithParams(self->engine, engine_params);
   if (res < 0) {
     PyErr_Format(PyExc_RuntimeError, "Could not start engine(%d)", res);

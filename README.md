@@ -1,7 +1,7 @@
-# cronet
+# python-cronet
 
 
-`cronet` is a library to use Chromium's network stack from Python.
+`python-cronet` is a library to use Chromium's network stack from Python.
 
 **The library is currently in alpha stage.**
 
