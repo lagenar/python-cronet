@@ -17,7 +17,7 @@ function repair_wheel() {
   python${python_version} -m pip uninstall --no-input auditwheel
   python${python_version} -m pip install git+https://github.com/lagenar/auditwheel.git
   python${python_version} -m build
-  python${python_version} -m auditwheel repair --plat manylinux_2_28_x86_64 "dist/cronet-${VERSION}-cp${wheel_version}-cp${wheel_version}-linux_x86_64.whl"
+  python${python_version} -m auditwheel repair --plat manylinux_2_28_x86_64 "dist/python-cronet-${VERSION}-cp${wheel_version}-cp${wheel_version}-linux_x86_64.whl"
 }
 
 
