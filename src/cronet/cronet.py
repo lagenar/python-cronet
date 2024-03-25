@@ -200,6 +200,21 @@ class Cronet(BaseCronet):
         except CronetException:
             raise
 
+    def get(self, url: str, **kwargs) -> Response:
+        return self.request("GET", url, **kwargs)
+
+    def post(self, url: str, **kwargs) -> Response:
+        return self.request("POST", url, **kwargs)
+
+    def put(self, url: str, **kwargs) -> Response:
+        return self.request("PUT", url, **kwargs)
+
+    def patch(self, url: str, **kwargs) -> Response:
+        return self.request("PATCH", url, **kwargs)
+
+    def delete(self, url: str, **kwargs) -> Response:
+        return self.request("DELETE", url, **kwargs)
+
 
 class AsyncCronet(BaseCronet):
     async def request(
@@ -246,3 +261,18 @@ class AsyncCronet(BaseCronet):
         else:
             self._engine.cancel(cronet_req)
             raise TimeoutError()
+
+    async def get(self, url: str, **kwargs) -> Response:
+        return await self.request("GET", url, **kwargs)
+
+    async def post(self, url: str, **kwargs) -> Response:
+        return await self.request("POST", url, **kwargs)
+
+    async def put(self, url: str, **kwargs) -> Response:
+        return await self.request("PUT", url, **kwargs)
+
+    async def patch(self, url: str, **kwargs) -> Response:
+        return await self.request("PATCH", url, **kwargs)
+
+    async def delete(self, url: str, **kwargs) -> Response:
+        return await self.request("DELETE", url, **kwargs)
