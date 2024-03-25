@@ -9,29 +9,23 @@ mv /app/cronet_build /tmp
 cp /tmp/cronet_build/libcronet*so /lib64
 cp /tmp/cronet_build/include/*.h /usr/local/include
 
-python3.8 -m pip uninstall --no-input auditwheel
-python3.8 -m pip install git+https://github.com/lagenar/auditwheel.git
-python3.8 -m build
-python3.8 -m auditwheel repair --plat manylinux_2_28_x86_64 dist/cronet-$VERSION-cp38-cp38-linux_x86_64.whl
 
-python3.9 -m pip uninstall --no-input auditwheel
-python3.9 -m pip install git+https://github.com/lagenar/auditwheel.git
-python3.9 -m build
-python3.9 -m auditwheel repair --plat manylinux_2_28_x86_64 dist/cronet-$VERSION-cp39-cp39-linux_x86_64.whl
+function repair_wheel() {
+  local python_version="$1"
+  local wheel_version="$2"
 
-python3.10 -m pip uninstall --no-input auditwheel
-python3.10 -m pip install git+https://github.com/lagenar/auditwheel.git
-python3.10 -m build
-python3.10 -m auditwheel repair --plat manylinux_2_28_x86_64 dist/cronet-$VERSION-cp310-cp310-linux_x86_64.whl
+  python${python_version} -m pip uninstall --no-input auditwheel
+  python${python_version} -m pip install git+https://github.com/lagenar/auditwheel.git
+  python${python_version} -m build
+  python${python_version} -m auditwheel repair --plat manylinux_2_28_x86_64 "dist/cronet-${VERSION}-cp${wheel_version}-cp${wheel_version}-linux_x86_64.whl"
+}
 
-python3.11 -m pip uninstall --no-input auditwheel
-python3.11 -m pip install git+https://github.com/lagenar/auditwheel.git
-python3.11 -m build
-python3.11 -m auditwheel repair --plat manylinux_2_28_x86_64 dist/cronet-$VERSION-cp311-cp311-linux_x86_64.whl
 
-python3.12 -m pip uninstall --no-input auditwheel
-python3.12 -m pip install git+https://github.com/lagenar/auditwheel.git
-python3.12 -m build
-python3.12 -m auditwheel repair --plat manylinux_2_28_x86_64 dist/cronet-$VERSION-cp312-cp312-linux_x86_64.whl
+repair_wheel "3.8" "38"
+repair_wheel "3.9" "39"
+repair_wheel "3.10" "310"
+repair_wheel "3.11" "311"
+repair_wheel "3.12" "312"
+
 
 mv /tmp/cronet_build /app
