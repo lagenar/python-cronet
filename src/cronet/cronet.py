@@ -139,7 +139,7 @@ class RequestCallback:
         self._set_result(self._response)
 
 
-class BaseCronet:
+class Cronet:
     def __init__(self):
         self._engine = None
 
@@ -158,65 +158,6 @@ class BaseCronet:
         if self._engine:
             del self._engine
 
-
-class Cronet(BaseCronet):
-    def request(
-        self,
-        method: str,
-        url: str,
-        *,
-        params: Optional[URLParams] = None,
-        data: Optional[dict[str, str]] = None,
-        content: Optional[bytes] = None,
-        json: Optional[Any] = None,
-        headers: Optional[dict[str, str]] = None,
-        allow_redirects: bool = True,
-        timeout: float = 10.0,
-    ) -> Response:
-        req = Request(
-            method=method,
-            url=url,
-            content=content,
-            headers=headers or {},
-            allow_redirects=allow_redirects,
-        )
-        if len([c_arg for c_arg in [data, content, json] if c_arg]) > 1:
-            raise ValueError("Only one of data, content and json can be provided")
-
-        if params:
-            req.add_url_params(params)
-        if data:
-            req.set_form_data(data)
-        elif json:
-            req.set_json_data(json)
-        request_future = concurrent.futures.Future()
-        callback = RequestCallback(req, request_future)
-        cronet_req = self._engine.request(callback)
-        try:
-            return request_future.result(timeout=timeout)
-        except TimeoutError:
-            self._engine.cancel(cronet_req)
-            raise
-        except CronetException:
-            raise
-
-    def get(self, url: str, **kwargs) -> Response:
-        return self.request("GET", url, **kwargs)
-
-    def post(self, url: str, **kwargs) -> Response:
-        return self.request("POST", url, **kwargs)
-
-    def put(self, url: str, **kwargs) -> Response:
-        return self.request("PUT", url, **kwargs)
-
-    def patch(self, url: str, **kwargs) -> Response:
-        return self.request("PATCH", url, **kwargs)
-
-    def delete(self, url: str, **kwargs) -> Response:
-        return self.request("DELETE", url, **kwargs)
-
-
-class AsyncCronet(BaseCronet):
     async def request(
         self,
         method: str,
@@ -233,6 +174,7 @@ class AsyncCronet(BaseCronet):
         if len([c_arg for c_arg in [data, content, json] if c_arg]) > 1:
             raise ValueError("Only one of `data`, `content` and `json` can be provided")
 
+        self.start()
         req = Request(
             method=method,
             url=url,
