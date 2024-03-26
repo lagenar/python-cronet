@@ -102,7 +102,7 @@ void on_redirect_received(Cronet_UrlRequestCallbackPtr callback,
   PyGILState_STATE gstate;
   gstate = PyGILState_Ensure();
   //PyObject *headers = PyDict_New();
-  PyObject *headers = PyList_New((Py_ssize_t)headers_size);
+  PyObject *headers = PyList_New((Py_ssize_t)0);
   for (int i=0; i < headers_size; i++) {
       Cronet_HttpHeaderPtr header = Cronet_UrlResponseInfo_all_headers_list_at(info, i);
       const char *key = Cronet_HttpHeader_name_get(header);
@@ -138,7 +138,7 @@ void on_response_started(Cronet_UrlRequestCallbackPtr callback,
   PyGILState_STATE gstate;
   gstate = PyGILState_Ensure();
   //PyObject *headers = PyDict_New();
-  PyObject *headers = PyList_New((Py_ssize_t)headers_size);
+  PyObject *headers = PyList_New((Py_ssize_t)0);
   for (int i=0; i < headers_size; i++) {
       Cronet_HttpHeaderPtr header = Cronet_UrlResponseInfo_all_headers_list_at(info, i);
       const char *key = Cronet_HttpHeader_name_get(header);
@@ -289,10 +289,23 @@ static int CronetEngine_init(CronetEngineObject *self, PyObject *args, PyObject 
     PyErr_SetString(PyExc_RuntimeError, "Could not create engine");
     goto fail;
   }
+  PyObject *py_proxy_rules = NULL;
+  if (!PyArg_ParseTuple(args, "O", &py_proxy_rules)) {
+    goto fail;
+  }
+  if (!Py_IsNone(py_proxy_rules)) {
+    const char *proxy_rules = PyUnicode_AsUTF8(py_proxy_rules);
+    if (!proxy_rules) {
+      goto fail;
+    }
+    Cronet_EngineParams_proxy_rules_set(engine_params, proxy_rules);
+    LOG(proxy_rules);
+  }
   Cronet_EngineParams_http_cache_mode_set(
       engine_params, Cronet_EngineParams_HTTP_CACHE_MODE_DISABLED);
   Cronet_EngineParams_enable_quic_set(engine_params, false);
   Cronet_EngineParams_user_agent_set(engine_params, "python-cronet");
+
   Cronet_RESULT res = Cronet_Engine_StartWithParams(self->engine, engine_params);
   if (res < 0) {
     PyErr_Format(PyExc_RuntimeError, "Could not start engine(%d)", res);

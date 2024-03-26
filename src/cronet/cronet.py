@@ -148,8 +148,9 @@ class RequestCallback:
 
 
 class Cronet:
-    def __init__(self):
+    def __init__(self, proxy_settings: Optional[str] = None):
         self._engine = None
+        self.proxy_settings = proxy_settings
 
     def __enter__(self):
         self.start()
@@ -160,7 +161,7 @@ class Cronet:
 
     def start(self):
         if not self._engine:
-            self._engine = _cronet.CronetEngine()
+            self._engine = _cronet.CronetEngine(self.proxy_settings)
 
     def stop(self):
         if self._engine:

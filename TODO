@@ -1,4 +1,3 @@
-- Use multidict for response headers
 - Proxy support
 - Run tests in gh
 - Smart decoding of responses
