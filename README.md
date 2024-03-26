@@ -20,31 +20,25 @@ The main benefits of using cronet as an HTTP client are:
 - Has the same TLS fingerprint as Chrome, meaning that Cloudflare and other bot detection systems can't block your requests based on it.
 - It's much more lightweight on system resources compared to headless Chrome(although it doesn't support executing javascript).
 
-# Example usage
-
-The library provides a synchronous and an asynchronous API:
-
 ## Installation
 
 **For the time being the only supported platform is linux-x86-64. The plan is to also support windows and macOS.**
 
 `pip install python-cronet`
 
-## Synchronous example
-```!python
-import cronet
+# Example usage
 
-with cronet.Cronet() as cr:
-    response = cr.request("GET", "https://example.com")
-```
+The library provides an asynchronous API:
 
-## Async example
 ```!python
+import asyncio
 import cronet
 
 async def main():
-    with cronet.AsyncCronet() as cr:
+    with cronet.Cronet() as cr:
         response = await cr.request("GET", "https://example.com")
-```
+        print(response.url, response.status_code)
 
+asyncio.run(main())
+```
 
