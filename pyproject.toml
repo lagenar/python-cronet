@@ -16,6 +16,7 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
+dependencies = ["multidict"]
 
 [project.optional-dependencies]
 test = ["pytest", "aiohttp", "pytest-asyncio"]

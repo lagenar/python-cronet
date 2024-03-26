@@ -6,6 +6,8 @@ from functools import cached_property
 from typing import Any, Optional, Union
 from urllib.parse import ParseResult, parse_qs, urlencode, urlparse
 
+from multidict import CIMultiDict
+
 from . import _cronet
 
 
@@ -74,7 +76,7 @@ class Request:
 @dataclass
 class Response:
     status_code: int
-    headers: dict[str, str]
+    headers: CIMultiDict
     url: str
     content: Optional[bytes]
 
@@ -112,17 +114,23 @@ class RequestCallback:
             )
 
     def on_redirect_received(
-        self, url: str, new_location: str, status_code: int, headers: dict[str, str]
+        self,
+        url: str,
+        new_location: str,
+        status_code: int,
+        headers: list[tuple[str, str]],
     ):
         self._response = Response(
-            url=url, status_code=status_code, headers=headers, content=b""
+            url=url, status_code=status_code, headers=CIMultiDict(headers), content=b""
         )
         if not self.request.allow_redirects:
             self._set_result(self._response)
 
-    def on_response_started(self, url: str, status_code: int, headers: dict[str, str]):
+    def on_response_started(
+        self, url: str, status_code: int, headers: list[tuple[str, str]]
+    ):
         self._response = Response(
-            url=url, status_code=status_code, headers=headers, content=None
+            url=url, status_code=status_code, headers=CIMultiDict(headers), content=None
         )
 
     def on_read_completed(self, data: bytes):

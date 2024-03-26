@@ -29,6 +29,13 @@ async def test_send_headers(aiohttp_server, cronet_client):
 
 
 @pytest.mark.asyncio
+async def test_case_insentive_headers(aiohttp_server, cronet_client):
+    response = await cronet_client.request("GET", f"{BASE_URL}/echo")
+    assert response.headers["content-type"] == "application/json; charset=utf-8"
+    assert response.headers["Content-Type"] == "application/json; charset=utf-8"
+
+
+@pytest.mark.asyncio
 async def test_send_params(aiohttp_server, cronet_client):
     response = await cronet_client.request(
         "GET", f"{BASE_URL}/echo", params={"test1": "1", "test2": "2"}

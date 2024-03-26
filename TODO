@@ -1,0 +1,9 @@
+- Use multidict for response headers
+- Proxy support
+- Run tests in gh
+- Smart decoding of responses
+- Stealth mode?
+- Better error handling in c module
+- Automate release
+- Windows build
+- macOS build

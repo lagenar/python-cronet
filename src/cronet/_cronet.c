@@ -101,13 +101,20 @@ void on_redirect_received(Cronet_UrlRequestCallbackPtr callback,
   int headers_size = Cronet_UrlResponseInfo_all_headers_list_size(info);
   PyGILState_STATE gstate;
   gstate = PyGILState_Ensure();
-  PyObject *headers = PyDict_New();
+  //PyObject *headers = PyDict_New();
+  PyObject *headers = PyList_New((Py_ssize_t)headers_size);
   for (int i=0; i < headers_size; i++) {
       Cronet_HttpHeaderPtr header = Cronet_UrlResponseInfo_all_headers_list_at(info, i);
       const char *key = Cronet_HttpHeader_name_get(header);
       const char *value = Cronet_HttpHeader_value_get(header);
-      PyObject *item = PyUnicode_FromStringAndSize(value, strlen(value));
-      PyDict_SetItemString(headers, key, item);
+
+      PyObject *py_key = PyUnicode_FromStringAndSize(key, strlen(key));
+      PyObject *py_value = PyUnicode_FromStringAndSize(value, strlen(value));
+      PyObject *py_header = PyTuple_New((Py_ssize_t)2);
+      PyTuple_SetItem(py_header, (Py_ssize_t)0, py_key);
+      PyTuple_SetItem(py_header, (Py_ssize_t)1, py_value);
+      PyList_Append(headers, py_header);
+      //PyDict_SetItemString(headers, key, item);
   }
   PyObject_CallMethod(ctx->py_callback, "on_redirect_received",
                       "ssiO", url, newLocationUrl, status_code, headers);
@@ -130,13 +137,20 @@ void on_response_started(Cronet_UrlRequestCallbackPtr callback,
   const char *url = Cronet_UrlResponseInfo_url_get(info);
   PyGILState_STATE gstate;
   gstate = PyGILState_Ensure();
-  PyObject *headers = PyDict_New();
+  //PyObject *headers = PyDict_New();
+  PyObject *headers = PyList_New((Py_ssize_t)headers_size);
   for (int i=0; i < headers_size; i++) {
       Cronet_HttpHeaderPtr header = Cronet_UrlResponseInfo_all_headers_list_at(info, i);
       const char *key = Cronet_HttpHeader_name_get(header);
       const char *value = Cronet_HttpHeader_value_get(header);
-      PyObject *item = PyUnicode_FromStringAndSize(value, strlen(value));
-      PyDict_SetItemString(headers, key, item);
+
+      PyObject *py_key = PyUnicode_FromStringAndSize(key, strlen(key));
+      PyObject *py_value = PyUnicode_FromStringAndSize(value, strlen(value));
+      PyObject *py_header = PyTuple_New((Py_ssize_t)2);
+      PyTuple_SetItem(py_header, (Py_ssize_t)0, py_key);
+      PyTuple_SetItem(py_header, (Py_ssize_t)1, py_value);
+      PyList_Append(headers, py_header);
+      //PyDict_SetItemString(headers, key, item);
   }
   PyObject_CallMethod(ctx->py_callback, "on_response_started", "siO",
                       url, status_code, headers);
