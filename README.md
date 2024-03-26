@@ -36,7 +36,7 @@ import cronet
 
 async def main():
     with cronet.Cronet() as cr:
-        response = await cr.request("GET", "https://example.com")
+        response = await cr.get("https://example.com")
         print(response.url, response.status_code)
 
 asyncio.run(main())
