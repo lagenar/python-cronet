@@ -70,7 +70,7 @@ index b5163c84b0..7c23727cb3 100644
    std::unique_ptr<base::Thread> file_thread_;
  
 +  const std::string proxy_rules_;
-+  
++
    // |network_tasks_| is owned by |this|. It is created off the network thread,
    // but invoked and destroyed on network thread.
    raw_ptr<NetworkTasks, AcrossTasksDanglingUntriaged> network_tasks_;
@@ -95,7 +95,7 @@ index 8e83cb0cf7..7b9bd2d909 100644
    string user_agent;
  
 +  string proxy_rules;
-+  
++
    /**
     * Sets a default value for the Accept-Language header value for UrlRequests
     * created by this engine. Explicitly setting the Accept-Language header
@@ -262,7 +262,7 @@ index 3ce700f953..3a79540f78 100644
    std::string user_agent = "";
 +
 +  std::string proxy_rules = "";
-+  
++
    // Experimental options encoded as a string in a JSON format containing
    // experiments and their corresponding configuration options. The format
    // is a JSON object with the name of the experiment as the key, and the
