@@ -62,7 +62,7 @@ index 7fa99a4a88..fdf0970bfd 100644
    GetNetworkTaskRunner()->PostTask(
        FROM_HERE,
 diff --git a/components/cronet/cronet_context.h b/components/cronet/cronet_context.h
-index b5163c84b0..7c23727cb3 100644
+index b5163c84b0..a19b25964f 100644
 --- a/components/cronet/cronet_context.h
 +++ b/components/cronet/cronet_context.h
 @@ -379,6 +379,8 @@ class CronetContext {
@@ -87,7 +87,7 @@ index e1162a786c..d508cb6cc4 100644
  // This file provides minimal "stub" implementations of the Cronet global-state
  // functions for the native library build, sufficient to have cronet_tests and
 diff --git a/components/cronet/native/cronet.idl b/components/cronet/native/cronet.idl
-index 8e83cb0cf7..7b9bd2d909 100644
+index 8e83cb0cf7..3be2a64b8e 100644
 --- a/components/cronet/native/cronet.idl
 +++ b/components/cronet/native/cronet.idl
 @@ -511,6 +511,8 @@ struct EngineParams {
@@ -224,7 +224,7 @@ index 5fe1caf483..f83e8a201a 100644
        enable_network_quality_estimator,
        bypass_public_key_pinning_for_local_trust_anchors,
 diff --git a/components/cronet/url_request_context_config.h b/components/cronet/url_request_context_config.h
-index 3ce700f953..3a79540f78 100644
+index 3ce700f953..2487a1d7b1 100644
 --- a/components/cronet/url_request_context_config.h
 +++ b/components/cronet/url_request_context_config.h
 @@ -127,6 +127,8 @@ struct URLRequestContextConfig {
