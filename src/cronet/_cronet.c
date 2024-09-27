@@ -298,7 +298,7 @@ static int CronetEngine_init(CronetEngineObject *self, PyObject *args, PyObject 
     if (!proxy_rules) {
       goto fail;
     }
-    //Cronet_EngineParams_proxy_rules_set(engine_params, proxy_rules);
+    Cronet_EngineParams_proxy_rules_set(engine_params, proxy_rules);
     LOG(proxy_rules);
   }
   Cronet_EngineParams_http_cache_mode_set(
