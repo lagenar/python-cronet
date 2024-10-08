@@ -15,6 +15,20 @@
 #define LOG(message)
 #endif
 
+#undef Py_Is
+#undef Py_IsNone
+
+// Export Py_Is(), Py_IsNone() as regular functions
+// for the stable ABI.
+int Py_Is(PyObject *x, PyObject *y)
+{
+    return (x == y);
+}
+
+int Py_IsNone(PyObject *x)
+{
+    return Py_Is(x, Py_None);
+}
 
 /* saves the cronet runnable to execute next for a single executor
    cronet runables are the atomic steps of a request.
