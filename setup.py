@@ -9,7 +9,7 @@ setup(
         Extension(
             name="cronet._cronet",
             include_dirs=include_dirs,
-            libraries=["cronet.129.0.6668.58"],
+            libraries=["cronet.130.0.6723.91"],
             sources=["src/cronet/_cronet.c"],
         ),
     ],
