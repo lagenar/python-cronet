@@ -23,9 +23,9 @@ jobs:
           key: ${{ runner.os }}-cronet2
       - name: Build Cronet
         if: steps.cache-cronet.outputs.cache-hit != 'true'
-        run: docker run -t -e PLAT=manylinux_2_28_x86_64 -e CHROMIUM=131.0.6778.139 -e VERSION=0.1.3 -v `pwd`:/app quay.io/pypa/manylinux_2_28_x86_64 /app/libcronet/build.sh
+        run: docker run -t -e PLAT=manylinux_2_28_x86_64 -e CHROMIUM=131.0.6778.139 -e VERSION=0.1.4 -v `pwd`:/app quay.io/pypa/manylinux_2_28_x86_64 /app/libcronet/build.sh
       - name: Build wheels
-        run: docker run -t -e PLAT=manylinux_2_28_x86_64 -e CHROMIUM=131.0.6778.139 -e VERSION=0.1.3 -v `pwd`:/app quay.io/pypa/manylinux_2_28_x86_64 /app/libcronet/build_wheels.sh
+        run: docker run -t -e PLAT=manylinux_2_28_x86_64 -e CHROMIUM=131.0.6778.139 -e VERSION=0.1.4 -v `pwd`:/app quay.io/pypa/manylinux_2_28_x86_64 /app/libcronet/build_wheels.sh
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
