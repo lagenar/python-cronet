@@ -5,6 +5,7 @@
 
 #include "Python.h"
 #include "cronet_c.h"
+#include "runnables.h"
 
 
 #define DEBUG 1
@@ -34,9 +35,9 @@ int Py_IsNone(PyObject *x)
    cronet runables are the atomic steps of a request.
 */
 typedef struct {
-  Cronet_RunnablePtr runnable;
-  pthread_mutex_t runnable_mutex;
-  pthread_cond_t cond;
+  Runnables* runnables;
+  pthread_mutex_t mutex;
+  pthread_cond_t new_item;
   volatile bool should_stop;
 } ExecutorContext;
 
@@ -72,18 +73,11 @@ void execute_runnable(Cronet_ExecutorPtr executor,
   ExecutorContext *run =
       (ExecutorContext *)Cronet_Executor_GetClientContext(executor);
 
-  bool updated = false;
-  while (!updated) {
-    pthread_mutex_lock(&run->runnable_mutex);
-    if (run->runnable == NULL) {
-      run->runnable = runnable;
-      updated = true;
-    }
-    if (updated) {
-      pthread_cond_signal(&run->cond);
-    }
-    pthread_mutex_unlock(&run->runnable_mutex);
-  }
+  pthread_mutex_lock(&run->mutex);
+  // TODO: check return value
+  runnables_enqueue(run->runnables, runnable);
+  pthread_cond_signal(&run->new_item);
+  pthread_mutex_unlock(&run->mutex);
 }
 
 
@@ -91,15 +85,22 @@ void execute_runnable(Cronet_ExecutorPtr executor,
 */
 void *process_requests(void *executor_context) {
   ExecutorContext *ctx = (ExecutorContext *)executor_context;
+  struct timespec ts;
   while (!ctx->should_stop) {
-    pthread_mutex_lock(&ctx->runnable_mutex);
-    int res = pthread_cond_wait(&ctx->cond, &ctx->runnable_mutex);
-    if (res == 0 && ctx->runnable != NULL) {
-      Cronet_Runnable_Run(ctx->runnable);
-      Cronet_Runnable_Destroy(ctx->runnable);
-      ctx->runnable = NULL;
+    
+    pthread_mutex_lock(&ctx->mutex);
+    clock_gettime(CLOCK_REALTIME, &ts);
+    ts.tv_nsec += 100;
+    
+    int res = pthread_cond_timedwait(&ctx->new_item, &ctx->mutex, &ts);
+    if (res == 0 || res == ETIMEDOUT) {
+      Cronet_RunnablePtr runnable = runnables_dequeue(ctx->runnables);
+      if (runnable != NULL) {
+        Cronet_Runnable_Run(runnable);
+        Cronet_Runnable_Destroy(runnable);
+      }
     }
-    pthread_mutex_unlock(&ctx->runnable_mutex);
+    pthread_mutex_unlock(&ctx->mutex);
   }
   return NULL;
 }
@@ -286,8 +287,10 @@ typedef struct {
 
 static void CronetEngine_dealloc(CronetEngineObject *self) {
   self->executor_context.should_stop = true;
-  pthread_cond_signal(&self->executor_context.cond);
   pthread_join(self->executor_thread, NULL);
+  runnables_destroy(self->executor_context.runnables);
+  pthread_cond_destroy(&self->executor_context.new_item);
+  pthread_mutex_destroy(&self->executor_context.mutex);
   Cronet_Executor_Destroy(self->executor);
   Cronet_Engine_Shutdown(self->engine);
   Cronet_Engine_Destroy(self->engine);
@@ -333,10 +336,15 @@ static int CronetEngine_init(CronetEngineObject *self, PyObject *args, PyObject 
     PyErr_SetString(PyExc_RuntimeError, "Could not create executor");
     goto fail;
   }
+  Runnables* runnables = (Runnables*)malloc(sizeof(Runnables));
+  runnables_init(runnables);
+  if (!runnables) {
+    abort();
+  }
   self->executor_context = (ExecutorContext){
-      .runnable = NULL,
-      .cond = PTHREAD_COND_INITIALIZER,
-      .runnable_mutex = PTHREAD_MUTEX_INITIALIZER,
+      .runnables = runnables,
+      .mutex = PTHREAD_MUTEX_INITIALIZER,
+      .new_item = PTHREAD_COND_INITIALIZER,
       .should_stop = false,
   };
   Cronet_Executor_SetClientContext(self->executor,
