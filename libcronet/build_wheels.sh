@@ -26,6 +26,7 @@ repair_wheel "3.9" "39"
 repair_wheel "3.10" "310"
 repair_wheel "3.11" "311"
 repair_wheel "3.12" "312"
+repair_wheel "3.13" "313"
 
 
 mv /tmp/cronet_build /app
